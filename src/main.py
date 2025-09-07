@@ -8,6 +8,7 @@ import socket
 import subprocess
 import signal
 import argparse
+import glob
 
 VERSION = '0.1.0'
 
@@ -316,6 +317,47 @@ def _kill_pids(pids: list[int]):
         except Exception:
             pass
 
+def _detect_camera_device(config_value: str) -> str:
+    """Return a camera device path. If config_value is not 'auto', return it.
+    Otherwise attempt detection via Gst.DeviceMonitor, fallback to /dev/video* scan."""
+    if config_value.lower() != 'auto':
+        return config_value
+    try:
+        monitor = Gst.DeviceMonitor.new()
+        monitor.add_filter("Video/Source")  # type: ignore[arg-type]
+        monitor.start()
+        devices = monitor.get_devices() or []  # type: ignore[assignment]
+        candidates: list[str] = []
+        for d in devices:
+            props = d.get_properties()
+            if props:
+                path = props.get_string('device.path') or props.get_string('device.node')
+                if path and path.startswith('/dev/video'):
+                    candidates.append(path)
+        monitor.stop()
+        # Deduplicate while preserving order
+        seen = set()
+        ordered = []
+        for c in candidates:
+            if c not in seen:
+                seen.add(c)
+                ordered.append(c)
+        candidates = ordered
+        if candidates:
+            logging.info("Auto-selected camera (DeviceMonitor): %s", candidates[0])
+            return candidates[0]
+    except Exception as e:
+        logging.debug("DeviceMonitor detection failed: %s", e)
+    # Fallback: glob /dev/video*
+    vids = sorted(glob.glob('/dev/video[0-9]*'))
+    for dev in vids:
+        # quick permission / existence check
+        if os.access(dev, os.R_OK):
+            logging.info("Auto-selected camera (filesystem): %s", dev)
+            return dev
+    logging.error("No video devices found (auto detection)")
+    return '/dev/video0'
+
 def main():
     parser = argparse.ArgumentParser(description='Camera RTSP Service')
     parser.add_argument('--config', '-c', default='config.ini', help='Path to config file')
@@ -337,7 +379,10 @@ def main():
 
     cam = cfg['camera']
     enc = cfg['encoding']
-    device = cam.get('device', '/dev/video0')
+    device_cfg = cam.get('device', '/dev/video0')
+    device = _detect_camera_device(device_cfg)
+    # Overwrite in config object for logging consistency
+    cam['device'] = device
     width = cam.getint('width', 0)
     height = cam.getint('height', 0)
     framerate = cam.getint('framerate', 0)
