@@ -1,0 +1,33 @@
+# Virtual environments
+.venv/
+.env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Logs
+*.log
+gst_debug.log
+app.log
+
+# Type checking / tests
+.mypy_cache/
+.pytest_cache/
+.coverage*
+htmlcov/
+
+# Packaging
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Other

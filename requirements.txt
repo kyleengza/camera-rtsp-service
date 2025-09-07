@@ -1,0 +1,1 @@
+# Python-only dependencies (GStreamer via system packages)

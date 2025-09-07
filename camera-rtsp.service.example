@@ -1,0 +1,17 @@
+[Unit]
+Description=Camera RTSP Service
+After=network.target
+Documentation=https://github.com/kyleengza/camera-rtsp-service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/camera-rtsp-service
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/camera-rtsp-service/.venv/bin/python src/main.py --config /opt/camera-rtsp-service/config.ini
+User=rtspcam
+Group=video
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

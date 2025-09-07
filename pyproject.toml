@@ -1,0 +1,21 @@
+[project]
+name = "camera-rtsp-service"
+version = "0.1.0"
+description = "Lightweight RTSP streaming service for V4L2 cameras using GStreamer"
+authors = [{name="Your Name"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["gstreamer", "rtsp", "camera", "v4l2"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Multimedia :: Video :: Capture",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/kyleengza/camera-rtsp-service"
+
+[tool.setuptools]
+py-modules = []
