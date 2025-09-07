@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Camera RTSP Service Headless Installer
-# Idempotent: safe to re-run. Creates service user, installs package (wheel or source),
-# deploys config if missing, and sets up systemd unit.
+# Camera RTSP Service Headless Installer (Debian/Ubuntu & Arch/Manjaro)
+# Added distro detection and optional system dependency installation.
 
 USER_NAME="camera"
 PREFIX="/opt/camera-rtsp-service"
@@ -13,6 +12,7 @@ EXTRA_PIP_ARGS=""
 PORT=8554
 HEALTH_PORT=0
 METRICS_PORT=0
+INSTALL_DEPS=0
 
 usage() {
   cat <<EOF
@@ -23,10 +23,11 @@ Options:
   --prefix DIR             Install directory (default: /opt/camera-rtsp-service)
   --python PATH            Python executable (default: python3)
   --pip-args "ARGS"        Extra pip install args
+  --install-deps           Install required system dependencies (apt / pacman)
   --port N                 RTSP port (default 8554)
   --health-port N          Health endpoint port (0=disabled)
   --metrics-port N         Metrics endpoint port (0=disabled)
-  --force                  Reinstall package force (pip install --upgrade --force-reinstall)
+  --force                  Reinstall package force
   --no-editable            Do normal install even in git checkout
   --device DEV             Override camera device (default auto)
   --codec CODEC            Override codec (auto|h264|jpeg)
@@ -43,6 +44,7 @@ BITRATE_OVERRIDE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --install-deps) INSTALL_DEPS=1; shift;;
     --user) USER_NAME="$2"; shift 2;;
     --prefix) PREFIX="$2"; shift 2;;
     --python) PYTHON_BIN="$2"; shift 2;;
@@ -62,18 +64,43 @@ done
 
 log() { echo "[install] $*"; }
 
-require_cmd() { command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 2; }; }
+have() { command -v "$1" >/dev/null 2>&1; }
 
-require_cmd "$PYTHON_BIN"
-require_cmd pip
-require_cmd systemctl
+install_deps() {
+  if [[ $INSTALL_DEPS -eq 0 ]]; then
+    return
+  fi
+  if have pacman; then
+    log "Installing dependencies via pacman"
+    sudo pacman -Sy --needed --noconfirm \
+      gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly \
+      gst-libav gst-rtsp-server python-gobject python-pip
+    # Optional hardware extras suggestions (not auto):
+    echo "[install] (Optional) For VAAPI: pacman -S --needed libva-intel-driver libva-mesa-driver" >&2
+    echo "[install] (Optional) For NVIDIA NVENC ensure proprietary driver installed" >&2
+  elif have apt-get; then
+    log "Installing dependencies via apt"
+    sudo apt-get update
+    sudo apt-get install -y python3-gi gir1.2-gst-rtsp-server-1.0 \
+      gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+      gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav python3-pip
+  else
+    log "No supported package manager found (pacman or apt-get). Skipping system dependencies." >&2
+  fi
+}
+
+install_deps
+
+# Adjust nologin path (Arch uses /usr/bin/nologin)
+NOLOGIN_BIN=$(command -v nologin || echo /usr/sbin/nologin)
 
 # Create user if needed
 if id "$USER_NAME" >/dev/null 2>&1; then
   log "User $USER_NAME exists"
 else
   log "Creating system user $USER_NAME"
-  useradd -r -s /usr/sbin/nologin -d "$PREFIX" "$USER_NAME"
+  useradd -r -s "$NOLOGIN_BIN" -d "$PREFIX" "$USER_NAME" || {
+    log "useradd failed; trying adduser"; adduser --system --home "$PREFIX" --shell "$NOLOGIN_BIN" "$USER_NAME"; }
 fi
 usermod -aG video "$USER_NAME" || true
 

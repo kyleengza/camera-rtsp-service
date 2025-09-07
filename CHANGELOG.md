@@ -45,3 +45,7 @@
 
 ### Removed
 - Legacy scripts fully removed (install_service.sh, uninstall_service.sh, setup_env.sh).
+
+## [0.2.0-beta.2] - 2025-09-07
+### Added
+- Manjaro/Arch support in headless installer (pacman dependency installation).

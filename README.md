@@ -38,6 +38,14 @@ cam-rtsp run -c config.ini --verbose --metrics-port 9300 --health-port 8080
 ffplay -rtsp_transport tcp rtsp://localhost:8554/stream
 ```
 
+## Arch / Manjaro Quick Start
+```bash
+sudo pacman -Sy --needed gstreamer gst-plugins-{base,good,bad,ugly} gst-libav gst-rtsp-server python-gobject python-pip
+pip install -e .[dev]
+cp config.example.ini config.ini
+cam-rtsp run -c config.ini --verbose
+```
+
 ## Common Commands
 ```bash
 cam-rtsp list-devices                # enumerate cameras
@@ -142,6 +150,11 @@ MIT
 sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --port 8554
 ```
 Resulting stream: `rtsp://<host>:8554/stream`
+
+## Headless Install (Auto deps, Arch or Debian)
+```bash
+sudo bash scripts/install.sh --install-deps --user camera --prefix /opt/camera-rtsp-service
+```
 
 ## Headless Uninstall
 ```bash

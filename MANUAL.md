@@ -61,22 +61,27 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now camera-rtsp.service
 ```
 
-### 3.3 Headless Scripted Install
-From repository checkout:
+### 3.3 Arch / Manjaro Dependencies
 ```bash
-sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --port 8554
+sudo pacman -Sy --needed gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly \
+  gst-libav gst-rtsp-server python-gobject python-pip
 ```
-Add overrides:
+Optional hardware packages:
+- Intel VAAPI: libva-intel-driver libva-mesa-driver
+- AMD: already via mesa (ensure mesa-vdpau if needed)
+- NVIDIA NVENC: proprietary nvidia package (>= 515) and matching driver
+
+### 3.4 Headless Script (Auto System Deps)
 ```bash
-sudo bash scripts/install.sh --device /dev/video2 --codec h264 --bitrate 4000 --metrics-port 9300 --health-port 8080
+sudo bash scripts/install.sh --install-deps --user camera --prefix /opt/camera-rtsp-service --metrics-port 9300 --health-port 8080
 ```
 
-### 3.4 Scripted Uninstall
+### 3.5 Scripted Uninstall (Same on Arch/Debian)
 ```bash
 sudo bash scripts/uninstall.sh --purge --remove-user
 ```
 
-### 3.5 Minimal Runtime Dependencies
+### 3.6 Minimal Runtime Dependencies
 At minimum you need GStreamer core + base/good plugins and whichever encoders you want (ugly/bad for x264, hardware specifics for VAAPI/NVENC etc.).
 
 ## 4. Configuration Layering
