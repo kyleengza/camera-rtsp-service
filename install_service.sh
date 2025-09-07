@@ -98,7 +98,7 @@ bitrate_kbps = 0
 auto_bitrate = true
 auto_bitrate_factor = 0.00007
 hardware_priority = $HARDWARE_PRIORITY
- gop_size = 60
+gop_size = 60
 tune = zerolatency
 speed_preset = ultrafast
 profile = baseline
@@ -120,7 +120,7 @@ fi
 
 log "Running environment setup (may install system deps separately if missing)"
 # Use system site packages to access gi and gstreamer libs
-sudo -u "$SERVICE_USER" bash -c 'cd "$INSTALL_DIR" && USE_SYSTEM_SITE_PACKAGES=true ./setup_env.sh' || {
+sudo -u "$SERVICE_USER" bash -c "cd '$INSTALL_DIR' && USE_SYSTEM_SITE_PACKAGES=true ./setup_env.sh" || {
   warn "Environment setup had warnings";
 }
 
