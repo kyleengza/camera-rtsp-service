@@ -84,6 +84,16 @@ sudo bash scripts/uninstall.sh --purge --remove-user
 ### 3.6 Minimal Runtime Dependencies
 At minimum you need GStreamer core + base/good plugins and whichever encoders you want (ugly/bad for x264, hardware specifics for VAAPI/NVENC etc.).
 
+#### Arch Virtualenv Default
+The installer uses a venv at `<prefix>/venv` to comply with PEP 668. Use `--system` to install into system site-packages (adds `--break-system-packages`).
+```bash
+sudo bash scripts/install.sh --install-deps --user camera --prefix /opt/camera-rtsp-service
+```
+Force system install (not recommended):
+```bash
+sudo bash scripts/install.sh --install-deps --system
+```
+
 ## 4. Configuration Layering
 Precedence (later wins):
 1. Built-in defaults

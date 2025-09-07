@@ -49,3 +49,5 @@
 ## [0.2.0-beta.2] - 2025-09-07
 ### Added
 - Manjaro/Arch support in headless installer (pacman dependency installation).
+### Changed
+- Installer now defaults to virtualenv on Arch/Manjaro to satisfy PEP 668; `--system` bypasses.

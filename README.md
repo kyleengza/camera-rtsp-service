@@ -46,6 +46,12 @@ cp config.example.ini config.ini
 cam-rtsp run -c config.ini --verbose
 ```
 
+### Arch / Manjaro Notes
+By default the headless installer creates a virtualenv to avoid PEP 668 restrictions. To force a system install:
+```bash
+sudo bash scripts/install.sh --install-deps --system
+```
+
 ## Common Commands
 ```bash
 cam-rtsp list-devices                # enumerate cameras
