@@ -15,12 +15,16 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now camera-rtsp.service
 ```
 
-## Uninstall
+## Headless Automation (Checkout)
 ```bash
-sudo systemctl disable --now camera-rtsp.service
-sudo rm /etc/systemd/system/camera-rtsp.service
-sudo systemctl daemon-reload
-pip uninstall -y camera-rtsp-service
-sudo userdel camera   # optional
-sudo rm -rf /opt/camera-rtsp-service  # optional
+sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --port 8554
+```
+Override device & bitrate:
+```bash
+sudo bash scripts/install.sh --device /dev/video2 --bitrate 4000
+```
+
+## Uninstall Script
+```bash
+sudo bash scripts/uninstall.sh --purge --remove-user
 ```

@@ -61,17 +61,22 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now camera-rtsp.service
 ```
 
-### 3.3 Uninstall
+### 3.3 Headless Scripted Install
+From repository checkout:
 ```bash
-sudo systemctl disable --now camera-rtsp.service
-sudo rm /etc/systemd/system/camera-rtsp.service
-sudo systemctl daemon-reload
-pip uninstall -y camera-rtsp-service
-sudo userdel camera   # optional
-sudo rm -rf /opt/camera-rtsp-service  # optional
+sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --port 8554
+```
+Add overrides:
+```bash
+sudo bash scripts/install.sh --device /dev/video2 --codec h264 --bitrate 4000 --metrics-port 9300 --health-port 8080
 ```
 
-### 3.4 Minimal Runtime Dependencies
+### 3.4 Scripted Uninstall
+```bash
+sudo bash scripts/uninstall.sh --purge --remove-user
+```
+
+### 3.5 Minimal Runtime Dependencies
 At minimum you need GStreamer core + base/good plugins and whichever encoders you want (ugly/bad for x264, hardware specifics for VAAPI/NVENC etc.).
 
 ## 4. Configuration Layering

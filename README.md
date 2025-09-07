@@ -136,3 +136,14 @@ Refer to `CHANGELOG.md` (current dev version 0.2.0.dev0).
 
 ## License
 MIT
+
+## One-Line Headless Install (from checkout)
+```bash
+sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --port 8554
+```
+Resulting stream: `rtsp://<host>:8554/stream`
+
+## Headless Uninstall
+```bash
+sudo bash scripts/uninstall.sh --purge --remove-user
+```

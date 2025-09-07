@@ -38,6 +38,7 @@
 - First beta of modular architecture (promotion from dev0).
 - CI workflow (lint, type check, tests).
 - INSTALL.md and MANUAL.md detailed docs.
+- Headless installer `scripts/install.sh` and uninstaller `scripts/uninstall.sh`.
 
 ### Changed
 - Refined README with single install/uninstall flow.
