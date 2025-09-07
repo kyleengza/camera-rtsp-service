@@ -157,9 +157,17 @@ sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --p
 ```
 Resulting stream: `rtsp://<host>:8554/stream`
 
-## Headless Install (Auto deps, Arch or Debian)
+## Headless Install (venv default)
 ```bash
-sudo bash scripts/install.sh --install-deps --user camera --prefix /opt/camera-rtsp-service
+sudo bash scripts/install.sh --install-deps --user camera --prefix /opt/camera-rtsp-service --metrics-port 9300 --health-port 8080
+```
+Upgrade later:
+```bash
+sudo bash scripts/install.sh --upgrade --user camera --prefix /opt/camera-rtsp-service
+```
+System install (not recommended):
+```bash
+sudo bash scripts/install.sh --system --install-deps
 ```
 
 ## Headless Uninstall

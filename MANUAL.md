@@ -94,6 +94,20 @@ Force system install (not recommended):
 sudo bash scripts/install.sh --install-deps --system
 ```
 
+#### Installer Flags
+| Flag | Description |
+|------|-------------|
+| --install-deps | Install system packages (apt/pacman) |
+| --upgrade | Recreate/upgrade virtualenv & update package |
+| --system | Skip venv and install into system (adds --break-system-packages on Arch) |
+| --device / --codec / --bitrate | Inline config overrides |
+| --health-port / --metrics-port | Enable HTTP endpoints |
+
+#### Upgrade Example
+```bash
+sudo bash scripts/install.sh --upgrade --user camera --prefix /opt/camera-rtsp-service
+```
+
 ## 4. Configuration Layering
 Precedence (later wins):
 1. Built-in defaults

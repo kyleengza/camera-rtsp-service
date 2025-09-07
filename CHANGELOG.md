@@ -51,3 +51,5 @@
 - Manjaro/Arch support in headless installer (pacman dependency installation).
 ### Changed
 - Installer now defaults to virtualenv on Arch/Manjaro to satisfy PEP 668; `--system` bypasses.
+### Added
+- Installer flags: --upgrade, enforced venv by default.
