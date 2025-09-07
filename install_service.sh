@@ -119,7 +119,7 @@ kill_existing = false
 [logging]
 level = INFO
 verbose = false
-python_log_file =
+python_log_file = /opt/camera-rtsp-service/app.log
 EOF
   fi
 else

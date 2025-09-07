@@ -1,7 +1,8 @@
 """Camera RTSP Service
 
 Provides an RTSP endpoint for a V4L2 camera with optional H.264 hardware/software encoding
-or MJPEG passthrough. Includes auto bitrate, preflight validation, and camera auto-detect.
+or MJPEG passthrough. Includes auto bitrate, preflight validation, camera auto-detect,
+and basic diagnostics (device listing, preflight fallback).
 """
 import sys
 import logging
@@ -362,16 +363,47 @@ def _detect_camera_device(config_value: str) -> str:
     logging.error("No video devices found (auto detection)")
     return '/dev/video0'
 
+def _list_devices() -> list[tuple[str,str]]:
+    """Return list of (device_path, display_name)."""
+    results: list[tuple[str,str]] = []
+    try:
+        monitor = Gst.DeviceMonitor.new()
+        monitor.add_filter("Video/Source")  # type: ignore[arg-type]
+        monitor.start()
+        devices = monitor.get_devices() or []  # type: ignore[assignment]
+        for d in devices:
+            props = d.get_properties()
+            label = d.get_display_name() or "(no-name)"
+            path = None
+            if props:
+                path = props.get_string('device.path') or props.get_string('device.node')
+            if path and path.startswith('/dev/video'):
+                results.append((path, label))
+        monitor.stop()
+    except Exception as e:
+        logging.debug("Device listing failed: %s", e)
+    if not results:
+        for dev in sorted(glob.glob('/dev/video[0-9]*')):
+            results.append((dev, ''))
+    return results
+
 def main():
     parser = argparse.ArgumentParser(description='Camera RTSP Service')
     parser.add_argument('--config', '-c', default='config.ini', help='Path to config file')
     parser.add_argument('--print-pipeline', action='store_true', help='Print resolved pipeline and exit')
     parser.add_argument('--dry-run', action='store_true', help='Build pipeline & preflight only (no server)')
     parser.add_argument('--version', action='store_true', help='Print version and exit')
+    parser.add_argument('--list-devices', action='store_true', help='List detected camera devices and exit')
     args = parser.parse_args()
 
     if args.version:
         print(f'camera-rtsp-service {VERSION}')
+        return
+
+    if args.list_devices:
+        Gst.init(None)
+        for path, name in _list_devices():
+            print(f"{path}\t{name}")
         return
 
     cfg = load_config(args.config)
@@ -396,8 +428,17 @@ def main():
     if preflight:
         use_mjpeg = (codec == 'jpeg') or (codec == 'auto')
         if not _preflight(device, use_mjpeg, width, height, framerate):
-            logging.error('Preflight failed. Aborting.')
-            return
+            # Fallback: if MJPEG attempt failed and we were trying MJPEG, retry raw before abort.
+            if use_mjpeg:
+                logging.warning('MJPEG preflight failed; retrying raw capture fallback...')
+                if not _preflight(device, False, width, height, framerate):
+                    logging.error('Preflight (fallback raw) failed. Aborting.')
+                    return
+                else:
+                    logging.info('Fallback raw preflight succeeded; proceeding.')
+            else:
+                logging.error('Preflight failed. Aborting.')
+                return
 
     rtsp_cfg = cfg['rtsp']
     port = rtsp_cfg.getint('port', 8554)
