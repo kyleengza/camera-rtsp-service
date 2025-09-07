@@ -25,7 +25,8 @@ class _PipelineFactory(GstRtspServer.RTSPMediaFactory):
 
     def do_configure(self, media: GstRtspServer.RTSPMedia):  # type: ignore[override]
         _sessions.inc()
-        return super().do_configure(media)
+        # Do NOT call base class: GI bug raises TypeError on some builds; base is a no-op.
+        return
 
 class HttpThread(threading.Thread):
     def __init__(self, host: str, port: int, app, name: str):

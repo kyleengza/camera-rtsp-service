@@ -1,6 +1,6 @@
 [project]
 name = "camera-rtsp-service"
-version = "0.2.0b1"
+version = "0.2.0b3"
 description = "RTSP streaming service for V4L2 cameras with auto-detect, hardware encoding, metrics, and systemd integration"
 authors = [{name="Your Name"}]
 license = {text = "MIT"}

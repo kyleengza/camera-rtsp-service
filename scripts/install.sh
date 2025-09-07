@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Camera RTSP Service Headless Installer (Debian/Ubuntu & Arch/Manjaro)
 # Always creates isolated virtualenv at <prefix>/venv unless --system supplied.
-# Safe / idempotent. Requires bash.
+# Installs system prerequisites by default (disable with --no-deps).
 set -euo pipefail
 
 USER_NAME="camera"
@@ -12,7 +12,7 @@ EXTRA_PIP_ARGS=""
 PORT=8554
 HEALTH_PORT=0
 METRICS_PORT=0
-INSTALL_DEPS=0
+INSTALL_DEPS=1
 FORCE=0
 NO_EDITABLE=0
 DEVICE_OVERRIDE=""
@@ -30,16 +30,17 @@ Options:
   --prefix DIR             Install directory (default: /opt/camera-rtsp-service)
   --python PATH            Python executable (default: python3)
   --pip-args "ARGS"        Extra pip install args passed to pip
-  --install-deps           Install GStreamer/system deps via apt or pacman
+  --no-deps                Skip system dependency installation
+  --install-deps           (Deprecated / no-op) System deps are installed by default
   --system                 Install into system site-packages (NOT recommended)
-  --upgrade                Upgrade existing environment/package
+  --upgrade                Recreate/upgrade virtualenv & update package
   --port N                 RTSP port (default 8554)
   --health-port N          Health endpoint port (0=disabled)
   --metrics-port N         Metrics endpoint port (0=disabled)
   --force                  Force reinstall (pip --force-reinstall)
   --no-editable            Disable editable install even in checkout
   --device DEV             Override camera.device
-  --codec CODEC            Override encoding.codec
+  --codec CODEC            Override encoding.codec (auto|h264|jpeg)
   --bitrate N              Override encoding.bitrate_kbps
   -h, --help               Show help
 EOF
@@ -47,6 +48,7 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --no-deps) INSTALL_DEPS=0; shift;;
     --install-deps) INSTALL_DEPS=1; shift;;
     --system) USE_SYSTEM=1; shift;;
     --upgrade) UPGRADE_ENV=1; shift;;
@@ -67,6 +69,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Auto-disable editable if installing for different service user or prefix != repo path
+if [[ $NO_EDITABLE -eq 0 ]]; then
+  if [[ "$USER_NAME" != "$(id -un 2>/dev/null || echo root)" || "$PREFIX" != "$PWD" ]]; then
+    echo "[install] Disabling editable install (service user or prefix differs)"
+    NO_EDITABLE=1
+  fi
+fi
+
 log(){ echo "[install] $*"; }
 err(){ echo "[install][error] $*" >&2; }
 
@@ -76,20 +86,23 @@ command -v systemctl >/dev/null || { err "systemctl required"; exit 2; }
 if [[ $INSTALL_DEPS -eq 1 ]]; then
   if command -v pacman >/dev/null 2>&1; then
     log "Installing dependencies (pacman)"
+    # Core + ffmpeg and jq for testing / config inspection
     sudo pacman -Sy --needed --noconfirm \
       gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly \
-      gst-libav gst-rtsp-server python-gobject python-pip
-    log "Optional VAAPI: pacman -S --needed libva-intel-driver libva-mesa-driver";
-    log "Optional NVIDIA: ensure proprietary driver installed";
+      gst-libav gst-rtsp-server python-gobject python-pip ffmpeg jq
+    log "Optional VAAPI: pacman -S --needed libva-intel-driver libva-mesa-driver"
+    log "Optional NVIDIA: proprietary driver already installed if using NVENC"
   elif command -v apt-get >/dev/null 2>&1; then
     log "Installing dependencies (apt)"
     sudo apt-get update
     sudo apt-get install -y python3-gi gir1.2-gst-rtsp-server-1.0 \
       gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-      gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav python3-pip
+      gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav python3-pip ffmpeg jq
   else
     log "Skipping system deps (neither pacman nor apt-get found)"
   fi
+else
+  log "Skipping dependency installation (user requested --no-deps)"
 fi
 
 NOLOGIN_BIN=$(command -v nologin || echo /usr/sbin/nologin)
@@ -104,13 +117,39 @@ chown "$USER_NAME":"$USER_NAME" "$PREFIX"
 VENV_DIR="$PREFIX/venv"
 PIP="pip"
 if [[ $USE_SYSTEM -eq 0 ]]; then
+  VENV_ARGS="--upgrade-deps"
+  if command -v pacman >/dev/null 2>&1; then
+    VENV_ARGS="$VENV_ARGS --system-site-packages"
+    log "Using --system-site-packages so python-gobject (gi) from system is visible"
+  fi
   if [[ ! -d "$VENV_DIR" || $UPGRADE_ENV -eq 1 ]]; then
-    log "Creating/Updating virtualenv: $VENV_DIR"
-    "$PYTHON_BIN" -m venv "$VENV_DIR" --upgrade-deps || "$PYTHON_BIN" -m venv "$VENV_DIR"
+    log "Creating/Updating virtualenv: $VENV_DIR ($VENV_ARGS)"
+    "$PYTHON_BIN" -m venv "$VENV_DIR" $VENV_ARGS || "$PYTHON_BIN" -m venv "$VENV_DIR"
   fi
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
   PIP="$VENV_DIR/bin/pip"
+  if command -v pacman >/dev/null 2>&1; then
+    if ! python -c 'import gi' 2>/dev/null; then
+      log "gi not found inside venv; injecting system site-packages path fallback"
+      SYS_SITE=$($PYTHON_BIN -c 'import site,sys; print(next(p for p in site.getsitepackages() if p.endswith("site-packages")))') || SYS_SITE="/usr/lib/python$(python -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages"
+      echo "$SYS_SITE" > "$VENV_DIR/lib/python$(python -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages/_system_site_fix.pth" || true
+      if python -c 'import gi' 2>/dev/null; then
+        log "gi import succeeded after path injection"
+      else
+        err "Still cannot import gi; attempting source build (PyGObject + pycairo)"
+        # Attempt to install build prerequisites (best effort)
+        sudo pacman -Sy --needed --noconfirm gobject-introspection pkgconf cairo glib2 base-devel || true
+        $PIP install --no-binary=:all: pycairo || true
+        $PIP install --no-binary=:all: PyGObject || true
+        if python -c 'import gi' 2>/dev/null; then
+          log "gi available after PyGObject build"
+        else
+          err "PyGObject build fallback failed; please ensure system python-gobject supports Python version and retry."
+        fi
+      fi
+    fi
+  fi
 else
   if command -v pacman >/dev/null 2>&1; then
     EXTRA_PIP_ARGS="$EXTRA_PIP_ARGS --break-system-packages"
@@ -127,10 +166,22 @@ if [[ -f pyproject.toml && $NO_EDITABLE -eq 0 ]]; then
     $PIP install -e . $EXTRA_PIP_ARGS
   fi
 else
-  if [[ $FORCE -eq 1 ]]; then
-    $PIP install --upgrade --force-reinstall camera-rtsp-service $EXTRA_PIP_ARGS
+  if [[ $NO_EDITABLE -eq 1 ]]; then
+    log "Standard (non-editable) install"
+  fi
+  if [[ -f pyproject.toml ]]; then
+    log "Local source (sdist/wheel) install from current checkout"
+    if [[ $FORCE -eq 1 ]]; then
+      $PIP install --upgrade --force-reinstall . $EXTRA_PIP_ARGS
+    else
+      $PIP install --upgrade . $EXTRA_PIP_ARGS
+    fi
   else
-    $PIP install --upgrade camera-rtsp-service $EXTRA_PIP_ARGS
+    if [[ $FORCE -eq 1 ]]; then
+      $PIP install --upgrade --force-reinstall camera-rtsp-service $EXTRA_PIP_ARGS || { err "Package camera-rtsp-service not found on index and no local source present"; exit 3; }
+    else
+      $PIP install --upgrade camera-rtsp-service $EXTRA_PIP_ARGS || { err "Package camera-rtsp-service not found on index and no local source present"; exit 3; }
+    fi
   fi
 fi
 
@@ -208,7 +259,12 @@ systemctl daemon-reload
 systemctl enable --now camera-rtsp.service
 
 log "Install complete"
-log " Stream: rtsp://$(hostname -f):$PORT/stream"
-log " Health: http://$(hostname -f):$HEALTH_PORT/ (if enabled)"
-log "Metrics: http://$(hostname -f):$METRICS_PORT/ (if enabled)"
+log "  Stream: rtsp://$(hostname -f):$PORT/stream"
+if [[ $HEALTH_PORT -ne 0 ]]; then log "  Health: http://$(hostname -f):$HEALTH_PORT/"; fi
+if [[ $METRICS_PORT -ne 0 ]]; then log " Metrics: http://$(hostname -f):$METRICS_PORT/"; fi
 log "   Mode: $( [[ $USE_SYSTEM -eq 0 ]] && echo venv || echo system )"
+log "Next steps:";
+log "  1) Dump config: sudo $CAM_BIN dump-config -c $CONFIG_PATH | jq";
+log "  2) Preflight:  sudo $CAM_BIN preflight -c $CONFIG_PATH";
+log "  3) Test:      ffplay -rtsp_transport tcp rtsp://$(hostname -f):$PORT/stream";
+log "  4) Logs:      journalctl -u camera-rtsp.service -f";

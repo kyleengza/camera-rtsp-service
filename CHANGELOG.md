@@ -53,3 +53,13 @@
 - Installer now defaults to virtualenv on Arch/Manjaro to satisfy PEP 668; `--system` bypasses.
 ### Added
 - Installer flags: --upgrade, enforced venv by default.
+
+## [0.2.0-beta.3] - 2025-09-07
+### Added
+- Installer: automatic PyGObject (gi) fallback build (pycairo + PyGObject) on Arch if system python-gobject not importable (Python version mismatch).
+- Installer: local source fallback when index package unavailable in non-editable mode.
+### Changed
+- Installer: logs clearer when editable install auto-disabled.
+### Fixed
+- Hardware encoder pipeline: detect supported bitrate property (bitrate vs target-bitrate) to avoid parse errors (e.g. nvh264enc).
+- RTSP factory configure TypeError suppressed (GI quirk) by removing base call.

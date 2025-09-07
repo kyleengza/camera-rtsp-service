@@ -49,8 +49,10 @@ cam-rtsp run -c config.ini --verbose
 ### Arch / Manjaro Notes
 By default the headless installer creates a virtualenv to avoid PEP 668 restrictions. To force a system install:
 ```bash
-sudo bash scripts/install.sh --install-deps --system
+sudo chmod +x scripts/*.sh
+sudo bash scripts/install.sh --system
 ```
+If `gi` missing (Python minor ahead of repo packages) the installer now attempts a source build of pycairo + PyGObject automatically.
 
 ## Common Commands
 ```bash
@@ -146,31 +148,19 @@ export CAMRTSP_RTSP__PORT=9554
 See `MANUAL.md` for an end‑to‑end installation, architecture, and tuning guide.
 
 ## Changelog
-Refer to `CHANGELOG.md` (current dev version 0.2.0.dev0).
+Refer to `CHANGELOG.md` (current beta version 0.2.0b3).
 
 ## License
 MIT
 
-## One-Line Headless Install (from checkout)
+## Automated Headless Install (All Prerequisites)
+Runs system dependency install (pacman/apt), creates venv, installs package, enables service.
 ```bash
-sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --port 8554
+sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --metrics-port 9300 --health-port 8080
 ```
-Resulting stream: `rtsp://<host>:8554/stream`
-
-## Headless Install (venv default)
+Post-install quick checks:
 ```bash
-sudo bash scripts/install.sh --install-deps --user camera --prefix /opt/camera-rtsp-service --metrics-port 9300 --health-port 8080
+sudo /opt/camera-rtsp-service/venv/bin/cam-rtsp dump-config -c /opt/camera-rtsp-service/config.ini | jq
+ffplay -rtsp_transport tcp rtsp://$(hostname -f):8554/stream
 ```
-Upgrade later:
-```bash
-sudo bash scripts/install.sh --upgrade --user camera --prefix /opt/camera-rtsp-service
-```
-System install (not recommended):
-```bash
-sudo bash scripts/install.sh --system --install-deps
-```
-
-## Headless Uninstall
-```bash
-sudo bash scripts/uninstall.sh --purge --remove-user
-```
+To skip deps: add `--no-deps`.

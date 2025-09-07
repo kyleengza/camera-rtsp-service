@@ -5,6 +5,7 @@ import gi
 
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst  # type: ignore
+from gi.repository import GObject  # type: ignore
 
 _HARDWARE_ENCODERS = [
     'v4l2h264enc', 'vaapih264enc', 'nvh264enc', 'omxh264enc', 'qsvh264enc'
@@ -53,6 +54,22 @@ def select_hw_encoder(priority: str):
                 props['rate-control'] = 'cbr'
             return enc, props
     return None, {}
+
+
+def _encoder_has_prop(name: str, prop: str) -> bool:
+    fac = Gst.ElementFactory.find(name)
+    if not fac:
+        return False
+    try:
+        elem = fac.create(None)
+    except Exception:
+        return False
+    if not elem:
+        return False
+    for pspec in elem.list_properties():  # type: ignore[attr-defined]
+        if pspec.name == prop:
+            return True
+    return False
 
 
 def build_pipeline(cfg) -> str:
@@ -116,8 +133,13 @@ def build_pipeline(cfg) -> str:
         prop_str_parts = []
         for k, v in hw_props.items():
             prop_str_parts.append(f"{k}={v}")
-        prop_str_parts.append(f"bitrate={bitrate}")
-        prop_str_parts.append(f"target-bitrate={bitrate*1000}")
+        # Prefer 'bitrate' if available; else 'target-bitrate' (usually expects bps)
+        if _encoder_has_prop(hw_encoder, 'bitrate'):
+            prop_str_parts.append(f"bitrate={bitrate}")
+        elif _encoder_has_prop(hw_encoder, 'target-bitrate'):
+            prop_str_parts.append(f"target-bitrate={bitrate*1000}")
+        else:
+            logging.warning("Encoder %s has no bitrate property; using defaults", hw_encoder)
         prop_str = " ".join(prop_str_parts)
         enc_block = f"{hw_encoder} {prop_str} ! h264parse config-interval=1 disable-passthrough=true ! rtph264pay name=pay0 pt=96 config-interval=1"
         pipeline = source_chain + enc_block

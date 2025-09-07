@@ -1,5 +1,7 @@
 # Camera RTSP Service – Detailed Manual
 
+> Beta 0.2.0b3: Modular architecture, hardware encoder auto-selection, health & metrics, hardened installer (venv + Arch PyGObject fallback), and RTSP factory stability fixes.
+
 ## 1. Overview
 The Camera RTSP Service is a lean daemon providing an RTSP endpoint for a V4L2 / USB camera using GStreamer. It emphasizes:
 - Minimal moving parts (single process, gst-rtsp-server based)
@@ -73,7 +75,8 @@ Optional hardware packages:
 
 ### 3.4 Headless Script (Auto System Deps)
 ```bash
-sudo bash scripts/install.sh --install-deps --user camera --prefix /opt/camera-rtsp-service --metrics-port 9300 --health-port 8080
+sudo chmod +x scripts/*.sh
+sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --metrics-port 9300 --health-port 8080
 ```
 
 ### 3.5 Scripted Uninstall (Same on Arch/Debian)
@@ -87,17 +90,17 @@ At minimum you need GStreamer core + base/good plugins and whichever encoders yo
 #### Arch Virtualenv Default
 The installer uses a venv at `<prefix>/venv` to comply with PEP 668. Use `--system` to install into system site-packages (adds `--break-system-packages`).
 ```bash
-sudo bash scripts/install.sh --install-deps --user camera --prefix /opt/camera-rtsp-service
+sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service
 ```
 Force system install (not recommended):
 ```bash
-sudo bash scripts/install.sh --install-deps --system
+sudo bash scripts/install.sh --system
 ```
 
 #### Installer Flags
 | Flag | Description |
 |------|-------------|
-| --install-deps | Install system packages (apt/pacman) |
+| --install-deps | (Deprecated) No-op: system deps installed by default |
 | --upgrade | Recreate/upgrade virtualenv & update package |
 | --system | Skip venv and install into system (adds --break-system-packages on Arch) |
 | --device / --codec / --bitrate | Inline config overrides |
@@ -107,6 +110,16 @@ sudo bash scripts/install.sh --install-deps --system
 ```bash
 sudo bash scripts/install.sh --upgrade --user camera --prefix /opt/camera-rtsp-service
 ```
+
+### Install Verification
+After running the installer:
+```bash
+sudo /opt/camera-rtsp-service/venv/bin/cam-rtsp dump-config -c /opt/camera-rtsp-service/config.ini | jq
+sudo /opt/camera-rtsp-service/venv/bin/cam-rtsp preflight -c /opt/camera-rtsp-service/config.ini
+ffplay -rtsp_transport tcp rtsp://$(hostname -f):8554/stream
+journalctl -u camera-rtsp.service -f
+```
+If `cam-rtsp` not found you are in a different shell venv; use full path above.
 
 ## 4. Configuration Layering
 Precedence (later wins):
@@ -232,3 +245,30 @@ Semantic versioning. Dev builds use `.devN`. See `CHANGELOG.md`.
 
 ## 16. License
 MIT
+
+#### PyGObject Fallback
+On Arch if system `python-gobject` does not yet match the active Python version, the installer now:
+1. Tries system-site-packages exposure.
+2. Injects a .pth pointing to system site-packages.
+3. Installs build prereqs and compiles `pycairo` then `PyGObject` from source.
+Check with:
+```bash
+sudo /opt/camera-rtsp-service/venv/bin/python -c "import gi; print('gi OK', gi.__file__)"
+```
+If still failing: ensure `gobject-introspection`, `glib2`, `cairo`, `pkgconf`, `base-devel` are installed then rerun `scripts/install.sh --upgrade`.
+
+### Runtime Configuration Changes
+Edit the active service config (default `/opt/camera-rtsp-service/config.ini`). Example:
+```bash
+sudo nano /opt/camera-rtsp-service/config.ini   # change ports, codec, bitrate, etc.
+```
+Apply changes:
+```bash
+sudo systemctl restart camera-rtsp.service
+```
+Validate:
+```bash
+sudo /opt/camera-rtsp-service/venv/bin/cam-rtsp dump-config -c /opt/camera-rtsp-service/config.ini | jq
+ss -tnlp | grep 8554   # confirm RTSP port listening (adjust if you changed it)
+```
+If port changed, update your client URL accordingly.
