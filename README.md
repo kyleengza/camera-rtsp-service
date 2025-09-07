@@ -1,61 +1,93 @@
-# camera-rtsp-service
+# Camera RTSP Service
 
-Lightweight RTSP streamer for USB / V4L2 webcams using GStreamer gst-rtsp-server.
-Provides H.264 (software x264, optional hardware encoders) or MJPEG passthrough.
-Includes preflight camera check, auto bitrate heuristic, hardware encoder auto-detect,
-latency tuning, and detailed logging / GStreamer debug controls.
+Modern, modular RTSP streaming daemon for V4L2 / USB cameras using GStreamer (gst-rtsp-server).
+Supports H.264 (software x264 + multiple hardware encoders) or MJPEG passthrough, auto device
+selection, bitrate heuristics, health & Prometheus metrics endpoints, and systemd integration.
 
-## Features
-- H.264 software (x264) or MJPEG passthrough
-- Optional hardware encoder auto-detect (v4l2h264enc, vaapih264enc, nvh264enc, omxh264enc)
-- Auto bitrate heuristic with configurable factor
-- Preflight camera probe before starting RTSP
-- Width/height/framerate optional (0 = let camera pick)
-- Prefer raw capture toggle (avoid JPEG decode when raw available)
-- Verbose Python + GStreamer debug output to file
-- Graceful signal handling for systemd
-- systemd unit example
+## Key Features
+- Auto camera detection & device listing
+- H.264 (software x264) or MJPEG passthrough; optional hardware encoders (v4l2h264enc, vaapih264enc, nvh264enc, omxh264enc, qsvh264enc)
+- Auto bitrate heuristic (resolution * fps * factor)
+- Preflight capture probe with fallback (MJPEG -> raw)
+- Layered configuration (defaults < INI < env vars < CLI)
+- Health (HTTP) & Prometheus metrics endpoints
+- Structured CLI subcommands (`cam-rtsp run …`)
+- Systemd unit generation (no large shell scripts)
+- JSON config dump, pipeline inspection, dry-run
 
-## Quick Start
+## TL;DR Quick Start (Development Checkout)
+```bash
+# 1. System packages (Debian/Ubuntu example)
+sudo apt update && sudo apt install -y \
+  python3-gi gir1.2-gst-rtsp-server-1.0 \
+  gstreamer1.0-tools gstreamer1.0-plugins-base \
+  gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
+  gstreamer1.0-plugins-ugly gstreamer1.0-libav
+
+# 2. Clone & install editable with dev extras
+pip install -e .[dev]
+
+# 3. Create config
+test -f config.ini || cp config.example.ini config.ini
+
+# 4. Run (verbose + metrics + health)
+cam-rtsp run -c config.ini --verbose --metrics-port 9300 --health-port 8080
+
+# Stream URL (default): rtsp://<host>:8554/stream
+# Test:
+ffplay -rtsp_transport tcp rtsp://localhost:8554/stream
 ```
-git clone https://github.com/kyleengza/camera-rtsp-service.git
-cd camera-rtsp-service
-./setup_env.sh USE_SYSTEM_SITE_PACKAGES=true
-source .venv/bin/activate
-cp config.example.ini config.ini
-python src/main.py --config config.ini
-```
-RTSP URL: `rtsp://<host>:8554/stream`
 
-## CLI Options
+## Common Commands
+```bash
+cam-rtsp list-devices                # enumerate cameras
+cam-rtsp preflight -c config.ini     # test capture capability
+cam-rtsp print-pipeline -c config.ini
+cam-rtsp dump-config -c config.ini | jq
 ```
-python src/main.py [--config CONFIG] [--print-pipeline] [--dry-run] [--version] [--list-devices]
-```
-- `--print-pipeline`: Show resolved GStreamer pipeline then exit
-- `--dry-run`: Load config, perform preflight & pipeline build, no server start
-- `--list-devices`: Enumerate detected camera devices
 
-## Configuration
-Copy `config.example.ini` to `config.ini` and adjust.
+## Systemd Deployment (Recommended)
+```bash
+sudo useradd -r -s /usr/sbin/nologin camera || true
+sudo usermod -aG video camera
+sudo mkdir -p /opt/camera-rtsp-service && sudo chown camera:camera /opt/camera-rtsp-service
+cp config.example.ini config.ini  # adjust if needed
+pip install .
+sudo cam-rtsp generate-systemd --user camera --prefix /opt/camera-rtsp-service --config /opt/camera-rtsp-service/config.ini
+sudo systemctl daemon-reload
+sudo systemctl enable --now camera-rtsp.service
+```
+
+### Uninstall
+```bash
+sudo systemctl disable --now camera-rtsp.service
+sudo rm /etc/systemd/system/camera-rtsp.service
+sudo systemctl daemon-reload
+pip uninstall -y camera-rtsp-service
+sudo userdel camera  # optional
+sudo rm -rf /opt/camera-rtsp-service  # optional
+```
+
+## Configuration (INI Example)
 ```
 [camera]
-preflight = true
 device = auto
+preflight = true
 width = 0
 height = 0
 framerate = 0
-prefer_raw = false             # if true and raw caps available, avoid MJPEG path
+prefer_raw = false
 
 [encoding]
-codec = auto                   # auto|h264|jpeg
-bitrate_kbps = 0               # if 0 and auto_bitrate=true -> heuristic
+codec = auto
+bitrate_kbps = 0
 auto_bitrate = true
-auto_bitrate_factor = 0.00007  # width*height*fps*factor
-hardware_priority = auto       # auto|off|list e.g. v4l2h264enc,nvh264enc
- gop_size = 60
+auto_bitrate_factor = 0.00007
+gop_size = 60
 tune = zerolatency
 speed_preset = ultrafast
 profile = baseline
+hardware_priority = auto
 
 [rtsp]
 port = 8554
@@ -69,78 +101,38 @@ python_log_file =
 # gst_debug_level = 4
 # gst_debug_categories = *:4,v4l2:5
 # gst_debug_file = gst_debug.log
+
+[health]
+health_port = 0
+metrics_port = 0
 ```
 
-### Codec Selection Logic (auto)
-1. If `hardware_priority` is a comma list: first available encoder from list
-2. Else if `hardware_priority=auto`: pick first available from predefined list
-3. Else fallback to `x264enc` if present
-4. Else MJPEG passthrough
-
-### Heuristic Bitrate
-`bitrate_kbps = int(width*height*fps*auto_bitrate_factor)` capped & minimum. If resolution/FPS unknown until runtime, default 2000 kbps.
-
-## Pipelines (Examples)
-MJPEG passthrough:
-```
-v4l2src ! image/jpeg ! queue leaky=downstream max-size-buffers=1 ! rtpjpegpay name=pay0 pt=26
-```
-Software H.264 (MJPEG cam):
-```
-v4l2src ! image/jpeg ! jpegdec ! videoconvert ! queue ! x264enc ... ! h264parse ! rtph264pay name=pay0 pt=96
-```
-Hardware example (auto-detected):
-```
-v4l2src ! video/x-raw,... ! queue ! v4l2h264enc extra-controls=... ! h264parse ! rtph264pay name=pay0 pt=96
+## Environment Variable Overrides
+Pattern: `CAMRTSP_<SECTION>__<KEY>=value`
+```bash
+export CAMRTSP_ENCODING__BITRATE_KBPS=5000
+export CAMRTSP_RTSP__PORT=9554
 ```
 
-## Systemd Service
-```
-sudo cp camera-rtsp.service.example /etc/systemd/system/camera-rtsp-service
-sudo systemctl daemon-reload
-sudo systemctl enable --now camera-rtsp-service
-```
-Adjust `User=` to a dedicated service account added to `video` group.
+## Metrics & Health
+- Metrics: `--metrics-port 9300` -> `http://<host>:9300/` Prometheus text format
+- Health:  `--health-port 8080`  -> `http://<host>:8080/` returns `OK`
 
-## Install / Uninstall
-Install (systemd + venv):
-```
-sudo ./install_service.sh --device auto
-```
-Uninstall completely:
-```
-sudo ./uninstall_service.sh --purge --remove-user
-```
-Retain user & install dir (omit flags).
+## Troubleshooting Cheatsheet
+| Symptom | Action |
+|---------|--------|
+| 400 Bad Request | Confirm mount path & URL; increase GST_DEBUG; run foreground `cam-rtsp run --verbose` |
+| not-negotiated | Remove fixed caps (set width/height=0) or disable prefer_raw |
+| High latency | Use hardware encoder, lower GOP, ensure TCP transport, or MJPEG passthrough |
+| High CPU | Enable hardware encoder; reduce resolution/fps; prefer_raw=true if raw supported |
+| Missing x264enc | Install `gstreamer1.0-plugins-ugly` |
+| No devices found | Check `v4l2-ctl --list-devices`; permissions (user in `video` group) |
 
-## Device Listing
-Quick list without starting server:
-```
-python src/main.py --list-devices
-```
-(Or installed path: sudo -u rtspcam /opt/camera-rtsp-service/.venv/bin/python /opt/camera-rtsp-service/src/main.py --list-devices)
-
-## Troubleshooting
-| Issue | Action |
-|-------|--------|
-| Client can’t connect | Check logs; preflight errors? port blocked? |
-| not-negotiated | Set width/height/framerate to 0 or enable prefer_raw=false |
-| High CPU | Lower resolution, use hardware encoder, or MJPEG passthrough |
-| Missing x264enc | Install ugly plugins or rely on hardware encoder |
-| Latency high | Use MJPEG passthrough or tune H.264 (ultrafast, low GOP) |
+## Full Manual
+See `MANUAL.md` for an end‑to‑end installation, architecture, and tuning guide.
 
 ## Changelog
-See `CHANGELOG.md` for release history. Current version: 0.1.0b1
-
-## Development / Git
-```
-# After cloning
-cp config.example.ini config.ini
-# Commit changes
-# Tag beta
-git tag -a v0.1.0-beta.1 -m "Beta 1"
-git push --tags
-```
+Refer to `CHANGELOG.md` (current dev version 0.2.0.dev0).
 
 ## License
 MIT

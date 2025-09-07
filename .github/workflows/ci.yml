@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gst-rtsp-server-1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-tools
+      - name: Install package
+        run: pip install -e .[dev]
+      - name: Lint
+        run: ruff check .
+      - name: Type check
+        run: mypy src/camera_rtsp_service || true
+      - name: Tests
+        run: pytest -q
