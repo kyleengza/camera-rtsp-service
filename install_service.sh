@@ -17,6 +17,7 @@ NO_START=false
 FORCE=false
 PREFER_RAW=false
 HARDWARE_PRIORITY="auto"
+RECREATE_VENV=false
 
 log() { printf "\033[1;32m[+]\033[0m %s\n" "$*"; }
 warn() { printf "\033[1;33m[!]\033[0m %s\n" "$*"; }
@@ -35,6 +36,7 @@ while [[ $# -gt 0 ]]; do
     --hardware-priority) HARDWARE_PRIORITY="$2"; shift 2;;
     --no-start) NO_START=true; shift;;
     --force) FORCE=true; shift;;
+    --recreate-venv) RECREATE_VENV=true; shift;;
     -h|--help)
       grep '^# ' "$0" | sed 's/^# //'; exit 0;
       ;;
@@ -119,10 +121,18 @@ else
 fi
 
 log "Running environment setup (may install system deps separately if missing)"
-# Use system site packages to access gi and gstreamer libs
-sudo -u "$SERVICE_USER" bash -c "cd '$INSTALL_DIR' && USE_SYSTEM_SITE_PACKAGES=true ./setup_env.sh" || {
+# Use system site packages to access gi and gstreamer libs; optionally recreate venv
+ENV_CMD="USE_SYSTEM_SITE_PACKAGES=true"
+if [[ $RECREATE_VENV == true ]]; then
+  ENV_CMD+=" REMOVE_VENV=true"
+fi
+sudo -u "$SERVICE_USER" bash -c "cd \"$INSTALL_DIR\" && $ENV_CMD ./setup_env.sh" || {
   warn "Environment setup had warnings";
 }
+if [[ ! -x "$INSTALL_DIR/.venv/bin/python" ]]; then
+  err "Virtual environment missing at $INSTALL_DIR/.venv (setup failed)";
+  exit 1
+fi
 
 UNIT_PATH="/etc/systemd/system/$SERVICE_NAME"
 log "Writing systemd unit $UNIT_PATH"
