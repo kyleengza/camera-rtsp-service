@@ -16,7 +16,7 @@ import signal
 import argparse
 import glob
 
-VERSION = '0.1.0b1'
+VERSION = '0.1.0b2'
 
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst  # type: ignore

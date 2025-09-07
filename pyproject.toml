@@ -1,6 +1,6 @@
 [project]
 name = "camera-rtsp-service"
-version = "0.1.0b1"
+version = "0.1.0b2"
 description = "Lightweight RTSP streaming service for V4L2 cameras using GStreamer"
 authors = [{name="Your Name"}]
 license = {text = "MIT"}
