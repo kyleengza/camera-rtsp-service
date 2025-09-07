@@ -29,10 +29,11 @@ RTSP URL: `rtsp://<host>:8554/stream`
 
 ## CLI Options
 ```
-python src/main.py [--config CONFIG] [--print-pipeline] [--dry-run] [--version]
+python src/main.py [--config CONFIG] [--print-pipeline] [--dry-run] [--version] [--list-devices]
 ```
 - `--print-pipeline`: Show resolved GStreamer pipeline then exit
 - `--dry-run`: Load config, perform preflight & pipeline build, no server start
+- `--list-devices`: Enumerate detected camera devices
 
 ## Configuration
 Copy `config.example.ini` to `config.ini` and adjust.
@@ -100,6 +101,24 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now camera-rtsp-service
 ```
 Adjust `User=` to a dedicated service account added to `video` group.
+
+## Install / Uninstall
+Install (systemd + venv):
+```
+sudo ./install_service.sh --device auto
+```
+Uninstall completely:
+```
+sudo ./uninstall_service.sh --purge --remove-user
+```
+Retain user & install dir (omit flags).
+
+## Device Listing
+Quick list without starting server:
+```
+python src/main.py --list-devices
+```
+(Or installed path: sudo -u rtspcam /opt/camera-rtsp-service/.venv/bin/python /opt/camera-rtsp-service/src/main.py --list-devices)
 
 ## Troubleshooting
 | Issue | Action |
