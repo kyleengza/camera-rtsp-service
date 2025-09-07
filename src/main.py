@@ -1,3 +1,8 @@
+"""Camera RTSP Service
+
+Provides an RTSP endpoint for a V4L2 camera with optional H.264 hardware/software encoding
+or MJPEG passthrough. Includes auto bitrate, preflight validation, and camera auto-detect.
+"""
 import sys
 import logging
 import os
@@ -10,7 +15,7 @@ import signal
 import argparse
 import glob
 
-VERSION = '0.1.0'
+VERSION = '0.1.0b1'
 
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst  # type: ignore
@@ -173,7 +178,6 @@ def build_pipeline(cfg) -> str:
         return pipeline
 
     # H.264 path
-    request_mjpeg_first = not prefer_raw  # if we prefer raw, request raw directly
     source_caps = raw_caps if prefer_raw else mjpg_caps
     decode_chain = "" if prefer_raw else "jpegdec ! videoconvert ! "
     source_chain = (

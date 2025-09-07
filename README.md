@@ -39,7 +39,7 @@ Copy `config.example.ini` to `config.ini` and adjust.
 ```
 [camera]
 preflight = true
-device = /dev/video0
+device = auto
 width = 0
 height = 0
 framerate = 0
@@ -110,14 +110,16 @@ Adjust `User=` to a dedicated service account added to `video` group.
 | Missing x264enc | Install ugly plugins or rely on hardware encoder |
 | Latency high | Use MJPEG passthrough or tune H.264 (ultrafast, low GOP) |
 
+## Changelog
+See `CHANGELOG.md` for release history. Current version: 0.1.0b1
+
 ## Development / Git
 ```
-git init
-git remote add origin https://github.com/kyleengza/camera-rtsp-service
-git add .
-git commit -m "Initial import"
-git push -u origin main
-git tag -a v0.1.0 -m "First release"
+# After cloning
+cp config.example.ini config.ini
+# Commit changes
+# Tag beta
+git tag -a v0.1.0-beta.1 -m "Beta 1"
 git push --tags
 ```
 
