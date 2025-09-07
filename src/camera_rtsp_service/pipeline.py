@@ -1,10 +1,13 @@
 """Pipeline construction and encoder selection."""
+# ruff: noqa: E402,I001
 from __future__ import annotations
-import logging
+
 import gi
 
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst  # type: ignore
+
+import logging
 
 _HARDWARE_ENCODERS = [
     'v4l2h264enc', 'vaapih264enc', 'nvh264enc', 'omxh264enc', 'qsvh264enc'
@@ -65,10 +68,7 @@ def _encoder_has_prop(name: str, prop: str) -> bool:
         return False
     if not elem:
         return False
-    for pspec in elem.list_properties():  # type: ignore[attr-defined]
-        if pspec.name == prop:
-            return True
-    return False
+    return any(pspec.name == prop for pspec in elem.list_properties())
 
 
 def build_pipeline(cfg) -> str:
@@ -92,18 +92,13 @@ def build_pipeline(cfg) -> str:
     have_x264 = _have_element('x264enc')
     hw_encoder, hw_props = select_hw_encoder(enc.hardware_priority) if codec in ('auto','h264') else (None, {})
 
-    use_h264 = False
     use_mjpeg_passthrough = False
     if codec == 'h264':
-        use_h264 = True
+        pass
     elif codec == 'jpeg':
         use_mjpeg_passthrough = True
     else:
-        if hw_encoder:
-            use_h264 = True
-        elif have_x264:
-            use_h264 = True
-        else:
+        if not (hw_encoder or have_x264):
             use_mjpeg_passthrough = True
             logging.warning("No H.264 encoder found; using MJPEG passthrough")
 

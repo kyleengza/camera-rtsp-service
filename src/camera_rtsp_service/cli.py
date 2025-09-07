@@ -1,10 +1,16 @@
 """Command line interface entry point."""
 from __future__ import annotations
-import argparse, logging, sys, os, textwrap, json, subprocess
-from .config import build_config, AppConfig
-from .logging_setup import configure_logging, configure_gst_debug
+
+import argparse
+import json
+import logging
+import os
+import sys
+
 from . import __version__
-from .detect import list_devices, auto_select, preflight
+from .config import build_config
+from .detect import auto_select, list_devices, preflight
+from .logging_setup import configure_gst_debug, configure_logging
 from .pipeline import build_pipeline
 from .server import RtspServer
 

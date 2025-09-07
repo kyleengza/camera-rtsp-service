@@ -148,7 +148,7 @@ export CAMRTSP_RTSP__PORT=9554
 See `MANUAL.md` for an end‑to‑end installation, architecture, and tuning guide.
 
 ## Changelog
-Refer to `CHANGELOG.md` (current beta version 0.2.0b3).
+Refer to `CHANGELOG.md` (current version 0.3.0).
 
 ## License
 MIT

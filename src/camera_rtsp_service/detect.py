@@ -1,17 +1,21 @@
 """Device detection and preflight utilities."""
+# ruff: noqa: E402,I001
 from __future__ import annotations
-import logging, glob, time
+
 import gi
 
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst  # type: ignore
 
+import glob
+import logging
+import time
+from contextlib import suppress
+
 
 def init_gst():  # idempotent
-    try:
+    with suppress(Exception):
         Gst.init(None)
-    except Exception:
-        pass
 
 
 def list_devices() -> list[tuple[str,str]]:

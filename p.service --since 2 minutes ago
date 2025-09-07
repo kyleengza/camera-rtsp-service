@@ -1,0 +1,40 @@
+Sep 07 22:25:14 potato-pc cam-rtsp[234630]:     return super().do_configure(media)
+Sep 07 22:25:14 potato-pc cam-rtsp[234630]:            ~~~~~~~~~~~~~~~~~~~~^^^^^^^
+Sep 07 22:25:14 potato-pc cam-rtsp[234630]: TypeError: GstRtspServer.RTSPMediaFactory.configure() takes exactly 2 arguments (1 given)
+Sep 07 22:29:45 potato-pc cam-rtsp[234630]: Traceback (most recent call last):
+Sep 07 22:29:45 potato-pc cam-rtsp[234630]:   File "/opt/camera-rtsp-service/venv/lib/python3.13/site-packages/camera_rtsp_service/server.py", line 28, in do_configure
+Sep 07 22:29:45 potato-pc cam-rtsp[234630]:     try:
+Sep 07 22:29:45 potato-pc cam-rtsp[234630]:     
+Sep 07 22:29:45 potato-pc cam-rtsp[234630]: TypeError: GstRtspServer.RTSPMediaFactory.configure() takes exactly 2 arguments (1 given)
+Sep 07 22:31:24 potato-pc systemd[1]: Stopping Camera RTSP Service...
+Sep 07 22:31:24 potato-pc cam-rtsp[234630]: 2025-09-07 22:31:24,310 INFO Signal received; shutting down
+Sep 07 22:31:24 potato-pc systemd[1]: camera-rtsp.service: Deactivated successfully.
+Sep 07 22:31:24 potato-pc systemd[1]: Stopped Camera RTSP Service.
+Sep 07 22:31:24 potato-pc systemd[1]: camera-rtsp.service: Consumed 6.201s CPU time, 116M memory peak.
+Sep 07 22:31:24 potato-pc systemd[1]: Started Camera RTSP Service.
+Sep 07 22:31:25 potato-pc cam-rtsp[235488]: 2025-09-07 22:31:25,211 INFO Logging initialized level=INFO file=stderr
+Sep 07 22:31:26 potato-pc cam-rtsp[235506]: pci id for fd 23: 10de:1b80, driver (null)
+Sep 07 22:31:26 potato-pc cam-rtsp[235506]: kmsro: driver missing
+Sep 07 22:31:26 potato-pc cam-rtsp[235488]: 2025-09-07 22:31:26,951 INFO Auto-selected camera: /dev/video0
+Sep 07 22:31:26 potato-pc cam-rtsp[235488]: 2025-09-07 22:31:26,951 INFO Preflight: v4l2src device=/dev/video0 ! image/jpeg ! fakesink name=sink sync=false
+Sep 07 22:31:27 potato-pc cam-rtsp[235488]: 2025-09-07 22:31:27,178 INFO Auto bitrate: 2000 kbps
+Sep 07 22:31:28 potato-pc cam-rtsp[235488]: 2025-09-07 22:31:28,177 INFO Using hardware encoder nvh264enc pipeline: v4l2src device=/dev/video0 ! image/jpeg ! jpegdec ! videoconvert ! queue leaky=downstream max-size-buffers=1 ! nvh264enc preset=low-latency-hq bitrate=2000 ! h264parse config-interval=1 disable-passthrough=true ! rtph264pay name=pay0 pt=96 config-interval=1
+Sep 07 22:31:28 potato-pc cam-rtsp[235488]: 2025-09-07 22:31:28,177 INFO RTSP listening: rtsp://localhost:8554/stream
+Sep 07 22:31:28 potato-pc cam-rtsp[235488]: 2025-09-07 22:31:28,178 INFO Health endpoint: http://localhost:8080/
+Sep 07 22:31:28 potato-pc cam-rtsp[235488]: 2025-09-07 22:31:28,178 INFO Metrics endpoint: http://localhost:9300/ (Prometheus)
+Sep 07 22:33:55 potato-pc cam-rtsp[235488]: 2025-09-07 22:33:55,767 INFO Signal received; shutting down
+Sep 07 22:33:55 potato-pc systemd[1]: Stopping Camera RTSP Service...
+Sep 07 22:33:56 potato-pc systemd[1]: camera-rtsp.service: Deactivated successfully.
+Sep 07 22:33:56 potato-pc systemd[1]: Stopped Camera RTSP Service.
+Sep 07 22:33:56 potato-pc systemd[1]: camera-rtsp.service: Consumed 1.454s CPU time, 114M memory peak.
+Sep 07 22:33:56 potato-pc systemd[1]: Started Camera RTSP Service.
+Sep 07 22:33:56 potato-pc cam-rtsp[235762]: 2025-09-07 22:33:56,599 INFO Logging initialized level=INFO file=stderr
+Sep 07 22:33:58 potato-pc cam-rtsp[235780]: pci id for fd 23: 10de:1b80, driver (null)
+Sep 07 22:33:58 potato-pc cam-rtsp[235780]: kmsro: driver missing
+Sep 07 22:33:58 potato-pc cam-rtsp[235762]: 2025-09-07 22:33:58,248 INFO Auto-selected camera: /dev/video0
+Sep 07 22:33:58 potato-pc cam-rtsp[235762]: 2025-09-07 22:33:58,248 INFO Preflight: v4l2src device=/dev/video0 ! image/jpeg ! fakesink name=sink sync=false
+Sep 07 22:33:58 potato-pc cam-rtsp[235762]: 2025-09-07 22:33:58,476 INFO Auto bitrate: 2000 kbps
+Sep 07 22:33:59 potato-pc cam-rtsp[235762]: 2025-09-07 22:33:59,480 INFO Using hardware encoder nvh264enc pipeline: v4l2src device=/dev/video0 ! image/jpeg ! jpegdec ! videoconvert ! queue leaky=downstream max-size-buffers=1 ! nvh264enc preset=low-latency-hq bitrate=2000 ! h264parse config-interval=1 disable-passthrough=true ! rtph264pay name=pay0 pt=96 config-interval=1
+Sep 07 22:33:59 potato-pc cam-rtsp[235762]: 2025-09-07 22:33:59,481 INFO RTSP listening: rtsp://localhost:8554/stream
+Sep 07 22:33:59 potato-pc cam-rtsp[235762]: 2025-09-07 22:33:59,481 INFO Health endpoint: http://localhost:8080/
+Sep 07 22:33:59 potato-pc cam-rtsp[235762]: 2025-09-07 22:33:59,481 INFO Metrics endpoint: http://localhost:9300/ (Prometheus)

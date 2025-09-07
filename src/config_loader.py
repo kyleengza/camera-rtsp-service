@@ -1,3 +1,6 @@
+# ruff: noqa
+# Legacy helper; configuration logic moved into `camera_rtsp_service.config`.
+
 import configparser
 from pathlib import Path
 from typing import Union

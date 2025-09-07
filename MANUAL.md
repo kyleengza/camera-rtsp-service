@@ -1,6 +1,6 @@
 # Camera RTSP Service – Detailed Manual
 
-> Beta 0.2.0b3: Modular architecture, hardware encoder auto-selection, health & metrics, hardened installer (venv + Arch PyGObject fallback), and RTSP factory stability fixes.
+> 0.3.0: Stable release – cleaned lint baseline, refined Ruff config, per‑file GI import ordering allowances, and installation polish.
 
 ## 1. Overview
 The Camera RTSP Service is a lean daemon providing an RTSP endpoint for a V4L2 / USB camera using GStreamer. It emphasizes:

@@ -1,5 +1,7 @@
-from camera_rtsp_service.pipeline import build_pipeline
 from types import SimpleNamespace
+
+from camera_rtsp_service.pipeline import build_pipeline
+
 
 class CfgNS(SimpleNamespace):
     pass

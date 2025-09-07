@@ -1,17 +1,11 @@
-"""Configuration loading and validation layers.
-
-Order of precedence (lowest -> highest):
-1. Built-in defaults
-2. INI file
-3. Environment variables (prefix CAMRTSP_)
-4. CLI overrides (passed dict)
-
-Outputs a Pydantic model for strong typing.
-"""
+"""Configuration loading and validation layers."""
 from __future__ import annotations
-from pydantic import BaseModel, Field, validator
-from typing import Optional, Dict, Any
-import os, configparser, json
+
+import configparser
+import os
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 DEFAULTS = {
     'camera': {
@@ -76,11 +70,12 @@ class RtspCfg(BaseModel):
     mount_path: str = '/stream'
     kill_existing: bool = False
 
-    @validator('mount_path')
-    def _norm_mount(cls, v: str) -> str:
+    def __init__(self, **data: Any):  # type: ignore[override]
+        super().__init__(**data)
+        v = self.mount_path
         if not v.startswith('/'):
             v = '/' + v
-        return v.rstrip('/') or '/stream'
+        self.mount_path = v.rstrip('/') or '/stream'
 
 class LoggingCfg(BaseModel):
     level: str = 'INFO'
@@ -148,7 +143,7 @@ _SIMPLE_CASTS = {
     'health_port': int, 'metrics_port': int,
 }
 
-def _coerce(section: str, k: str, v: str):
+def _coerce(_section: str, k: str, v: str):
     caster = _SIMPLE_CASTS.get(k)
     if caster:
         try:

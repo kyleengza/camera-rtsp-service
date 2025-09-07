@@ -1,25 +1,29 @@
+# ruff: noqa
+# Legacy file retained temporarily for reference; superseded by package `camera_rtsp_service`
 """Camera RTSP Service
 
 Provides an RTSP endpoint for a V4L2 camera with optional H.264 hardware/software encoding
 or MJPEG passthrough. Includes auto bitrate, preflight validation, camera auto-detect,
 and basic diagnostics (device listing, preflight fallback).
 """
-import sys
-import logging
-import os
-import gi
-import threading
-import time
-import socket
-import subprocess
-import signal
 import argparse
 import glob
+import logging
+import os
+import signal
+import subprocess
+import threading
+import time
+
+import gi
 
 VERSION = '0.1.0b2'
 
 gi.require_version('Gst', '1.0')
+import contextlib
+
 from gi.repository import Gst  # type: ignore
+
 from config_loader import load_config
 from rtsp_server import RtspServer
 
@@ -157,18 +161,15 @@ def build_pipeline(cfg) -> str:
     using_hw = hw_encoder is not None
 
     # Decide final path
-    use_h264 = False
     use_mjpeg_passthrough = False
 
     if codec == 'h264':
-        use_h264 = True
+        pass
     elif codec == 'jpeg':
         use_mjpeg_passthrough = True
     else:  # auto
-        if using_hw:
-            use_h264 = True
-        elif have_x264:
-            use_h264 = True
+        if using_hw or have_x264:
+            pass
         else:
             use_mjpeg_passthrough = True
             logging.warning("No H.264 encoder found; using MJPEG passthrough")
@@ -294,10 +295,8 @@ def _find_pids_using_port(port: int) -> list[int]:
                         # users:(("proc",pid=123,fd=...))
                         for token in part.split(','):
                             if token.startswith('pid='):
-                                try:
+                                with contextlib.suppress(ValueError):
                                     pids.append(int(token.split('=')[1]))
-                                except ValueError:
-                                    pass
         return list(dict.fromkeys(pids))
     except Exception as e:
         logging.debug("Port scan failed: %s", e)
@@ -479,10 +478,8 @@ def main():
         _stats_stop = True
         server.stop()
         for h in logging.getLogger().handlers:
-            try:
+            with contextlib.suppress(Exception):
                 h.flush()
-            except Exception:
-                pass
 
 if __name__ == '__main__':
     main()

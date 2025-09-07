@@ -1,15 +1,14 @@
 [project]
 name = "camera-rtsp-service"
-version = "0.2.0b3"
+version = "0.3.0"
+license = "MIT"
 description = "RTSP streaming service for V4L2 cameras with auto-detect, hardware encoding, metrics, and systemd integration"
 authors = [{name="Your Name"}]
-license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = ["gstreamer", "rtsp", "camera", "v4l2", "streaming"]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
   "Topic :: Multimedia :: Video :: Capture",
   "Intended Audience :: System Administrators",
   "Environment :: No Input/Output (Daemon)",
@@ -45,10 +44,12 @@ where = ["src"]
 include = ["camera_rtsp_service*"]
 
 [tool.setuptools.package-data]
-"camera_rtsp_service" = ["../MANUAL.md", "../INSTALL.md", "../CHANGELOG.md"]
+"camera_rtsp_service" = ["../MANUAL.md", "../INSTALL.md", "../CHANGELOG.md", "config.example.ini"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
 select = ["E","F","I","N","UP","B","SIM","ARG"]
 ignore = ["E501"]
 

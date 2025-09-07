@@ -1,31 +1,38 @@
 """Central logging and GStreamer debug configuration."""
 from __future__ import annotations
-import logging, os, pathlib
+
+import logging
+import os
+from pathlib import Path
+
 from .config import AppConfig
 
 _DEF_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 
 
-def configure_logging(cfg: AppConfig):
+def configure_logging(cfg: AppConfig) -> None:
     lvl = cfg.logging.level.upper()
     if cfg.logging.verbose:
         lvl = 'DEBUG'
-    log_kwargs = dict(level=getattr(logging, lvl, logging.INFO), format=_DEF_FORMAT, force=True)
+    log_kwargs: dict[str, object] = {
+        'level': getattr(logging, lvl, logging.INFO),
+        'format': _DEF_FORMAT,
+        'force': True,
+    }
     log_file = cfg.logging.python_log_file.strip()
     if log_file:
-        path = pathlib.Path(log_file)
+        path = Path(log_file)
         path.parent.mkdir(parents=True, exist_ok=True)
         log_kwargs['filename'] = str(path)
     logging.basicConfig(**log_kwargs)
     logging.info("Logging initialized level=%s file=%s", lvl, log_file or 'stderr')
 
 
-def configure_gst_debug(cfg: AppConfig):
+def configure_gst_debug(cfg: AppConfig) -> None:
     cats = cfg.logging.gst_debug_categories.strip()
     lvl = cfg.logging.gst_debug_level
     if cats:
-        # add level if not included
-        parts = []
+        parts: list[str] = []
         for seg in cats.split(','):
             seg = seg.strip()
             if not seg:

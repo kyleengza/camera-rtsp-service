@@ -63,3 +63,15 @@
 ### Fixed
 - Hardware encoder pipeline: detect supported bitrate property (bitrate vs target-bitrate) to avoid parse errors (e.g. nvh264enc).
 - RTSP factory configure TypeError suppressed (GI quirk) by removing base call.
+
+## 0.3.0 - 2025-09-07
+### Added
+- Per-file Ruff ignores for GI import ordering (keeps functional GI initialization pattern).
+- Version bump to stable 0.3.0.
+
+### Changed
+- Ruff configuration migrated to new [tool.ruff.lint] table.
+- Legacy monolithic files explicitly excluded via in-file `ruff: noqa` markers (kept only for reference).
+
+### Fixed
+- Lint baseline now clean (all checks passing).

@@ -1,14 +1,17 @@
 """RTSP Server wrapper plus optional health & metrics."""
+# ruff: noqa: E402,I001
 from __future__ import annotations
-import logging, threading
-from typing import Optional
+
 import gi
 
 gi.require_version('Gst', '1.0')
 gi.require_version('GstRtspServer', '1.0')
-from gi.repository import Gst, GstRtspServer, GObject  # type: ignore
-from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST, CollectorRegistry
-from wsgiref.simple_server import make_server, WSGIRequestHandler
+from gi.repository import GObject, Gst, GstRtspServer  # type: ignore
+
+import logging
+import threading
+from wsgiref.simple_server import WSGIRequestHandler, make_server
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, generate_latest
 
 _connections = Counter('rtsp_connections_total', 'RTSP client connections')
 _sessions = Counter('rtsp_sessions_total', 'RTSP sessions started')
@@ -23,7 +26,7 @@ class _PipelineFactory(GstRtspServer.RTSPMediaFactory):
         _connections.inc()
         return Gst.parse_launch(self.pipeline_str)
 
-    def do_configure(self, media: GstRtspServer.RTSPMedia):  # type: ignore[override]
+    def do_configure(self, _media: GstRtspServer.RTSPMedia):  # type: ignore[override]
         _sessions.inc()
         # Do NOT call base class: GI bug raises TypeError on some builds; base is a no-op.
         return
@@ -31,7 +34,9 @@ class _PipelineFactory(GstRtspServer.RTSPMediaFactory):
 class HttpThread(threading.Thread):
     def __init__(self, host: str, port: int, app, name: str):
         super().__init__(daemon=True, name=name)
-        self.host = host; self.port = port; self.app = app
+        self.host = host
+        self.port = port
+        self.app = app
         self.httpd = None
 
     def run(self):
@@ -59,8 +64,8 @@ class RtspServer:
         self.pipeline = pipeline
         self.loop: GObject.MainLoop | None = None
         self.server: GstRtspServer.RTSPServer | None = None
-        self._health_thread: Optional[HttpThread] = None
-        self._metrics_thread: Optional[HttpThread] = None
+        self._health_thread: HttpThread | None = None
+        self._metrics_thread: HttpThread | None = None
         self._registry = CollectorRegistry()
         # Re-register counters to custom registry
         global _connections, _sessions
@@ -69,11 +74,11 @@ class RtspServer:
         self.health_port = health_port
         self.metrics_port = metrics_port
 
-    def _health_app(self, environ, start_response):  # WSGI
+    def _health_app(self, _environ, start_response):  # WSGI
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return [b'OK']
 
-    def _metrics_app(self, environ, start_response):  # WSGI
+    def _metrics_app(self, _environ, start_response):  # WSGI
         try:
             output = generate_latest(self._registry)
             start_response('200 OK', [('Content-Type', CONTENT_TYPE_LATEST)])
