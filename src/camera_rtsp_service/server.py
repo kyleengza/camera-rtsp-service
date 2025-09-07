@@ -1,6 +1,6 @@
 """RTSP Server wrapper plus optional health & metrics."""
 from __future__ import annotations
-import logging, threading, socket, time
+import logging, threading
 from typing import Optional
 import gi
 

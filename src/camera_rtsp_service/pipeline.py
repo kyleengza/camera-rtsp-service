@@ -5,7 +5,6 @@ import gi
 
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst  # type: ignore
-from gi.repository import GObject  # type: ignore
 
 _HARDWARE_ENCODERS = [
     'v4l2h264enc', 'vaapih264enc', 'nvh264enc', 'omxh264enc', 'qsvh264enc'
