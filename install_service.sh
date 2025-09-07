@@ -18,6 +18,7 @@ FORCE=false
 PREFER_RAW=false
 HARDWARE_PRIORITY="auto"
 RECREATE_VENV=false
+VERBOSE=false
 
 log() { printf "\033[1;32m[+]\033[0m %s\n" "$*"; }
 warn() { printf "\033[1;33m[!]\033[0m %s\n" "$*"; }
@@ -37,12 +38,17 @@ while [[ $# -gt 0 ]]; do
     --no-start) NO_START=true; shift;;
     --force) FORCE=true; shift;;
     --recreate-venv) RECREATE_VENV=true; shift;;
+    --verbose) VERBOSE=true; shift;;
     -h|--help)
       grep '^# ' "$0" | sed 's/^# //'; exit 0;
       ;;
     *) err "Unknown arg: $1"; exit 1;;
   esac
 done
+
+if [[ $VERBOSE == true ]]; then
+  set -x
+fi
 
 need_root
 
@@ -126,13 +132,22 @@ ENV_CMD="USE_SYSTEM_SITE_PACKAGES=true"
 if [[ $RECREATE_VENV == true ]]; then
   ENV_CMD+=" REMOVE_VENV=true"
 fi
-sudo -u "$SERVICE_USER" bash -c "cd \"$INSTALL_DIR\" && $ENV_CMD ./setup_env.sh" || {
-  warn "Environment setup had warnings";
+sudo -u "$SERVICE_USER" bash -c "cd '$INSTALL_DIR' && $ENV_CMD ./setup_env.sh" || {
+  warn "Environment setup reported issues";
 }
+
 if [[ ! -x "$INSTALL_DIR/.venv/bin/python" ]]; then
-  err "Virtual environment missing at $INSTALL_DIR/.venv (setup failed)";
+  warn "Primary setup did not create venv. Attempting fallback creation.";
+  python3 -m venv --system-site-packages "$INSTALL_DIR/.venv" || {
+    err "Fallback venv creation failed"; exit 1; }
+  chown -R "$SERVICE_USER":video "$INSTALL_DIR/.venv"
+fi
+
+if [[ ! -x "$INSTALL_DIR/.venv/bin/python" ]]; then
+  err "Virtual environment still missing at $INSTALL_DIR/.venv (aborting).";
   exit 1
 fi
+log "Virtual environment OK: $INSTALL_DIR/.venv/bin/python"
 
 UNIT_PATH="/etc/systemd/system/$SERVICE_NAME"
 log "Writing systemd unit $UNIT_PATH"
