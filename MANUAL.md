@@ -203,18 +203,19 @@ pip install --upgrade camera-rtsp-service
 sudo systemctl restart camera-rtsp.service
 ```
 
-## 11. Security Hardening (Optional)
-Suggested additions to unit:
+### 10.3 Resource Preemption (Ports & Devices)
+If another process is listening on the RTSP port, or a process has the camera device open, enable automatic preemption:
+
+- INI: set `kill_existing = true` under `[rtsp]`.
+- Behavior on start (before preflight):
+  - Finds and terminates listeners on the RTSP port.
+  - Finds and terminates processes with `/dev/videoX` open.
+- Manual equivalents:
+```bash
+lsof -tiTCP:8554 -sTCP:LISTEN | xargs -r kill; sleep 1; lsof -tiTCP:8554 -sTCP:LISTEN | xargs -r kill -9
+fuser -kv /dev/video0 || true
 ```
-ProtectSystem=full
-ProtectHome=true
-PrivateTmp=true
-NoNewPrivileges=true
-DeviceAllow=/dev/video0 rw
-CapabilityBoundingSet=
-RestrictAddressFamilies=AF_INET AF_UNIX
-```
-Tune DeviceAllow per camera(s).
+Use with care in shared systems.
 
 ## 12. Troubleshooting
 | Problem | Likely Cause | Remedy |
@@ -225,6 +226,16 @@ Tune DeviceAllow per camera(s).
 | High CPU | Software x264 at high res | Use hardware encoder or MJPEG passthrough |
 | No devices found | Permissions | Add user to `video`, check `ls -l /dev/video*` |
 | Missing encoder | Plugin not installed | Install correct GStreamer plugin pack |
+| RTSP DESCRIBE returns 503 | Incompatible server version or misconfiguration | Ensure version 0.3.1+ is installed, check logs, verify mount path |
+
+### 12.5 RTSP DESCRIBE returns 503
+- Ensure version 0.3.1+ is installed (server wraps the pipeline as `( <pipeline> )`).
+- Enable RTSP debug and check logs:
+```bash
+export GST_DEBUG="rtspserver:7,rtspmedia:7,*:2"
+cam-rtsp run -c config.ini --verbose
+```
+- Verify mount path and that a media factory is attached.
 
 ## 13. Development
 Lint & tests:

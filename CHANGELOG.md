@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.1 (2025-09-10)
+### Fixed
+- RTSP media factory now wraps pipelines as `( <pipeline> )` to avoid 503 on DESCRIBE and parsing tail property into `)`.
+
+### Added
+- Optional pre-start resource preemption when `rtsp.kill_existing=true`:
+  - Terminates existing listeners on the RTSP port.
+  - Terminates processes holding the camera device (e.g., `/dev/video0`).
+
+### Changed
+- Docs: troubleshooting and install notes updated.
+
 ## v0.1.0-beta.2 (2025-09-07)
 - Added uninstaller script
 - Added device listing (--list-devices)

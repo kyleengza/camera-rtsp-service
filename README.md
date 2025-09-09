@@ -4,6 +4,10 @@ Modern, modular RTSP streaming daemon for V4L2 / USB cameras using GStreamer (gs
 Supports H.264 (software x264 + multiple hardware encoders) or MJPEG passthrough, auto device
 selection, bitrate heuristics, health & Prometheus metrics endpoints, and systemd integration.
 
+## What’s New (0.3.1)
+- Fix: RTSP DESCRIBE 503 due to pipeline parsing — factory now wraps as `( <pipeline> )`.
+- Feature: Optional pre-start resource preemption when `rtsp.kill_existing=true` (free port and camera device).
+
 ## Key Features
 - Auto camera detection & device listing
 - H.264 (software x264) or MJPEG passthrough; optional hardware encoders (v4l2h264enc, vaapih264enc, nvh264enc, omxh264enc, qsvh264enc)
@@ -14,6 +18,14 @@ selection, bitrate heuristics, health & Prometheus metrics endpoints, and system
 - Structured CLI subcommands (`cam-rtsp run …`)
 - Systemd unit generation (no large shell scripts)
 - JSON config dump, pipeline inspection, dry-run
+
+## Quick Fix Cheats
+- 503 on DESCRIBE: upgrade to >= 0.3.1; ensure server logs show `Gst.parse_launch("( <pipeline> )")`.
+- Port in use / device busy: set `kill_existing = true` in config or run:
+  ```bash
+  lsof -tiTCP:8554 -sTCP:LISTEN | xargs -r kill; sleep 1; lsof -tiTCP:8554 -sTCP:LISTEN | xargs -r kill -9
+  fuser -kv /dev/video0 || true
+  ```
 
 ## TL;DR Quick Start (Development Checkout)
 ```bash
@@ -137,7 +149,9 @@ export CAMRTSP_RTSP__PORT=9554
 ## Troubleshooting Cheatsheet
 | Symptom | Action |
 |---------|--------|
+| 503 on DESCRIBE | Upgrade to 0.3.1+, confirm factory wraps `( <pipeline> )`; enable GST debug |
 | 400 Bad Request | Confirm mount path & URL; increase GST_DEBUG; run foreground `cam-rtsp run --verbose` |
+| Device busy | Enable `kill_existing = true`, or run `fuser -kv /dev/video0` |
 | not-negotiated | Remove fixed caps (set width/height=0) or disable prefer_raw |
 | High latency | Use hardware encoder, lower GOP, ensure TCP transport, or MJPEG passthrough |
 | High CPU | Enable hardware encoder; reduce resolution/fps; prefer_raw=true if raw supported |
@@ -148,7 +162,7 @@ export CAMRTSP_RTSP__PORT=9554
 See `MANUAL.md` for an end‑to‑end installation, architecture, and tuning guide.
 
 ## Changelog
-Refer to `CHANGELOG.md` (current version 0.3.0).
+Refer to `CHANGELOG.md` (current version 0.3.1).
 
 ## License
 MIT
