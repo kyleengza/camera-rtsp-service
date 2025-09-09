@@ -95,9 +95,9 @@ framerate = 0
 prefer_raw = false
 
 [encoding]
-codec = auto
+codec = jpeg   # default: MJPEG passthrough (no re-encode)
 bitrate_kbps = 0
-auto_bitrate = true
+auto_bitrate = false
 auto_bitrate_factor = 0.00007
 gop_size = 60
 tune = zerolatency

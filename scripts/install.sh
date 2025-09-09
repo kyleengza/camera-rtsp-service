@@ -192,15 +192,15 @@ if [[ ! -f "$CONFIG_PATH" ]]; then
 [camera]
 device = auto
 preflight = true
-width = 0
-height = 0
-framerate = 0
+width = 640
+height = 480
+framerate = 30
 prefer_raw = false
 
 [encoding]
-codec = auto
+codec = jpeg
 bitrate_kbps = 0
-auto_bitrate = true
+auto_bitrate = false
 auto_bitrate_factor = 0.00007
 gop_size = 60
 tune = zerolatency

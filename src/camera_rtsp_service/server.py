@@ -24,7 +24,9 @@ class _PipelineFactory(GstRtspServer.RTSPMediaFactory):
 
     def do_create_element(self, _url):  # type: ignore[override]
         _connections.inc()
-        return Gst.parse_launch(self.pipeline_str)
+        # Important: wrap in parentheses so parse_launch returns a Bin suitable for RTSP server
+        # See gst-rtsp-server examples: "( videotestsrc is-live=true ! ... ! pay0 pt=96 )"
+        return Gst.parse_launch(f"({self.pipeline_str})")
 
     def do_configure(self, _media: GstRtspServer.RTSPMedia):  # type: ignore[override]
         _sessions.inc()

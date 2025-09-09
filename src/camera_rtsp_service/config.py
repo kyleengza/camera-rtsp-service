@@ -10,16 +10,16 @@ from pydantic import BaseModel, Field
 DEFAULTS = {
     'camera': {
         'device': 'auto',
-        'width': 0,
-        'height': 0,
-        'framerate': 0,
+        'width': 640,  # explicit default for reliable negotiation
+        'height': 480,
+        'framerate': 30,
         'prefer_raw': False,
         'preflight': True,
     },
     'encoding': {
-        'codec': 'auto',
+        'codec': 'jpeg',  # passthrough default
         'bitrate_kbps': 0,
-        'auto_bitrate': True,
+        'auto_bitrate': False,
         'auto_bitrate_factor': 0.00007,
         'gop_size': 60,
         'tune': 'zerolatency',
@@ -48,16 +48,16 @@ DEFAULTS = {
 
 class CameraCfg(BaseModel):
     device: str = Field(default='auto')
-    width: int = 0
-    height: int = 0
-    framerate: int = 0
+    width: int = 640
+    height: int = 480
+    framerate: int = 30
     prefer_raw: bool = False
     preflight: bool = True
 
 class EncodingCfg(BaseModel):
-    codec: str = 'auto'
+    codec: str = 'jpeg'
     bitrate_kbps: int = 0
-    auto_bitrate: bool = True
+    auto_bitrate: bool = False
     auto_bitrate_factor: float = 0.00007
     gop_size: int = 60
     tune: str = 'zerolatency'
