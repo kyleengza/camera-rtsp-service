@@ -154,7 +154,9 @@ def cmd_run(args):
     cfg.camera.device = auto_select(cfg.camera.device)
 
     # Optional: release port and device users before preflight/start
-    _maybe_release_resources(cfg.camera.device, cfg.rtsp.port, cfg.rtsp.kill_existing)
+    # Only when actually starting the server (not for print-pipeline or dry-run)
+    if not (getattr(args, 'print_pipeline', False) or getattr(args, 'dry_run', False)):
+        _maybe_release_resources(cfg.camera.device, cfg.rtsp.port, cfg.rtsp.kill_existing)
 
     # Preflight
     if cfg.camera.preflight:
