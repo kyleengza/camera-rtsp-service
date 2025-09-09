@@ -6,6 +6,8 @@ import json
 import logging
 import os
 import sys
+import time
+from contextlib import suppress
 
 from . import __version__
 from .config import build_config
@@ -13,6 +15,79 @@ from .detect import auto_select, list_devices, preflight
 from .logging_setup import configure_gst_debug, configure_logging
 from .pipeline import build_pipeline
 from .server import RtspServer
+
+# --- Best-effort resource release helpers (optional) ---
+
+def _find_port_pids(port: int) -> set[int]:
+    pids: set[int] = set()
+    try:
+        import psutil  # type: ignore
+        for c in psutil.net_connections(kind='tcp'):
+            try:
+                if c.laddr and getattr(c.laddr, 'port', None) == port and c.status == psutil.CONN_LISTEN:
+                    if c.pid:
+                        pids.add(c.pid)
+            except Exception:
+                continue
+    except Exception as e:
+        logging.debug("Port scan failed: %s", e)
+    return pids
+
+def _find_device_pids(device: str) -> set[int]:
+    pids: set[int] = set()
+    try:
+        import psutil  # type: ignore
+        for proc in psutil.process_iter(['pid', 'name', 'open_files']):
+            with suppress(Exception):
+                files = proc.info.get('open_files') or []
+                for f in files:
+                    # exact path match; also handle symlinked nodes by realpath compare
+                    if f.path == device:
+                        pids.add(proc.info['pid'])
+                        break
+    except Exception as e:
+        logging.debug("Device scan failed: %s", e)
+    return pids
+
+def _kill_pids(pids: set[int], what: str):
+    if not pids:
+        return
+    for pid in pids:
+        with suppress(ProcessLookupError):
+            try:
+                os.kill(pid, 15)
+                logging.warning("Sent SIGTERM to %s process %d", what, pid)
+            except PermissionError:
+                logging.error("No permission to terminate %s process %d", what, pid)
+            except Exception as e:
+                logging.error("Failed to SIGTERM %s process %d: %s", what, pid, e)
+    time.sleep(0.8)
+    for pid in list(pids):
+        with suppress(Exception):
+            os.kill(pid, 0)
+            try:
+                os.kill(pid, 9)
+                logging.warning("Sent SIGKILL to %s process %d", what, pid)
+            except PermissionError:
+                logging.error("No permission to SIGKILL %s process %d", what, pid)
+
+
+def _maybe_release_resources(device: str, port: int, enabled: bool):
+    if not enabled:
+        return
+    port_pids = _find_port_pids(port)
+    if port_pids:
+        logging.warning("Port %d in use by %s; attempting to terminate", port, sorted(port_pids))
+        _kill_pids(port_pids, f"port:{port}")
+    else:
+        logging.debug("Port %d appears free", port)
+    if device and device.startswith('/dev/video'):
+        dev_pids = _find_device_pids(device)
+        if dev_pids:
+            logging.warning("Device %s in use by %s; attempting to terminate", device, sorted(dev_pids))
+            _kill_pids(dev_pids, device)
+        else:
+            logging.debug("Device %s appears free", device)
 
 
 def _add_common_args(p: argparse.ArgumentParser):
@@ -77,6 +152,9 @@ def cmd_run(args):
 
     # Auto device
     cfg.camera.device = auto_select(cfg.camera.device)
+
+    # Optional: release port and device users before preflight/start
+    _maybe_release_resources(cfg.camera.device, cfg.rtsp.port, cfg.rtsp.kill_existing)
 
     # Preflight
     if cfg.camera.preflight:
