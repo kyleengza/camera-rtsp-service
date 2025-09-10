@@ -1,0 +1,6 @@
+paths:
+  all:
+    source: publisher
+rtspAddress: :8554
+rtpAddress: :8002
+rtcpAddress: :8003
