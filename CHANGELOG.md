@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.2 (2025-09-10)
+### Fixed
+- Correct preflight MJPEG/raw selection when codec=h264 and prefer_raw=false (eliminated placeholder logic).
+
+### Added
+- Documentation: clarified enabling persistent GST debug logging (rtsp/v4l2 categories) after reinstall.
+
+### Changed
+- Simplified preflight decision logic in CLI.
+
 ## 0.3.1 (2025-09-10)
 ### Fixed
 - RTSP media factory now wraps pipelines as `( <pipeline> )` to avoid 503 on DESCRIBE and parsing tail property into `)`.
@@ -8,9 +18,10 @@
 - Optional pre-start resource preemption when `rtsp.kill_existing=true`:
   - Terminates existing listeners on the RTSP port.
   - Terminates processes holding the camera device (e.g., `/dev/video0`).
+- Expanded uninstall/purge documentation (INSTALL.md, MANUAL.md) clarifying removal of prefix, user, and logs.
 
 ### Changed
-- Docs: troubleshooting and install notes updated.
+- Docs: troubleshooting and install/uninstall notes updated.
 
 ## v0.1.0-beta.2 (2025-09-07)
 - Added uninstaller script

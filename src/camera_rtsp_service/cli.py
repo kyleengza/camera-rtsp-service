@@ -160,7 +160,15 @@ def cmd_run(args):
 
     # Preflight
     if cfg.camera.preflight:
-        use_mjpeg = (cfg.encoding.codec in {'jpeg','auto'})
+        # Decide if initial preflight should request MJPEG caps.
+        # We preflight MJPEG when:
+        #  - codec explicitly jpeg
+        #  - codec auto (may downgrade to passthrough)
+        #  - codec h264 but capture path will pull MJPEG frames (prefer_raw = False)
+        if cfg.encoding.codec == 'h264':
+            use_mjpeg = not getattr(cfg.camera, 'prefer_raw', False)
+        else:
+            use_mjpeg = cfg.encoding.codec in {'jpeg', 'auto'}
         ok, reason = preflight(cfg.camera.device, use_mjpeg, cfg.camera.width, cfg.camera.height, cfg.camera.framerate)
         if not ok and use_mjpeg:
             logging.warning('MJPEG preflight failed (%s); retry raw fallback', reason)

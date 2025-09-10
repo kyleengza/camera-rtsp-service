@@ -24,7 +24,20 @@ Override device & bitrate:
 sudo bash scripts/install.sh --device /dev/video2 --bitrate 4000
 ```
 
-## Uninstall Script
+## Uninstall Script (Recommended)
 ```bash
 sudo bash scripts/uninstall.sh --purge --remove-user
+```
+Flags:
+- `--purge` removes the entire install prefix (venv, config, logs like gst_debug.log)
+- `--remove-user` deletes the service user (journald retains historical logs)
+
+## Manual Thorough Uninstall (If scripts missing)
+```bash
+sudo systemctl disable --now camera-rtsp.service || true
+sudo rm -f /etc/systemd/system/camera-rtsp.service
+sudo systemctl daemon-reload
+sudo rm -rf /opt/camera-rtsp-service           # adjust if custom prefix
+sudo pip uninstall -y camera-rtsp-service 2>/dev/null || true
+sudo userdel camera 2>/dev/null || true
 ```

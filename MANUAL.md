@@ -1,6 +1,7 @@
 # Camera RTSP Service – Detailed Manual
 
-> 0.3.0: Stable release – cleaned lint baseline, refined Ruff config, per‑file GI import ordering allowances, and installation polish.
+> 0.3.1: Maintenance + reliability – RTSP DESCRIBE 503 fix (factory wraps `( <pipeline> )`), optional resource preemption (`rtsp.kill_existing=true`) before start, docs clarified for uninstall/purge.
+> 0.3.2: Refined preflight logic (correct MJPEG/raw selection) + persistent GST debug logging guidance.
 
 ## 1. Overview
 The Camera RTSP Service is a lean daemon providing an RTSP endpoint for a V4L2 / USB camera using GStreamer. It emphasizes:
@@ -83,8 +84,23 @@ sudo bash scripts/install.sh --user camera --prefix /opt/camera-rtsp-service --m
 ```bash
 sudo bash scripts/uninstall.sh --purge --remove-user
 ```
+Adds:
+- `--purge` removes the entire prefix (venv, config, gst_debug.log, caches)
+- `--remove-user` deletes the service account (journal logs remain in systemd journal)
 
-### 3.6 Minimal Runtime Dependencies
+### 3.6 Thorough Manual Uninstall (If script not available)
+```bash
+sudo systemctl disable --now camera-rtsp.service || true
+sudo rm -f /etc/systemd/system/camera-rtsp.service
+sudo systemctl daemon-reload
+sudo rm -rf /opt/camera-rtsp-service            # prefix (adjust if custom)
+# If installed system-wide without venv:
+sudo pip uninstall -y camera-rtsp-service || true
+# Optional service user removal:
+sudo userdel camera 2>/dev/null || true
+```
+
+### 3.7 Minimal Runtime Dependencies
 At minimum you need GStreamer core + base/good plugins and whichever encoders you want (ugly/bad for x264, hardware specifics for VAAPI/NVENC etc.).
 
 #### Arch Virtualenv Default
@@ -236,6 +252,19 @@ export GST_DEBUG="rtspserver:7,rtspmedia:7,*:2"
 cam-rtsp run -c config.ini --verbose
 ```
 - Verify mount path and that a media factory is attached.
+
+### 12.6 Enabling Persistent Debug Logs (RTSP + V4L2)
+Add or modify under `[logging]` in the active config (default `/opt/camera-rtsp-service/config.ini`):
+```
+gst_debug_categories = rtspserver:6,rtspmedia:6,v4l2:5
+gst_debug_file = /opt/camera-rtsp-service/gst_debug.log
+```
+Then restart:
+```
+sudo systemctl restart camera-rtsp.service
+sudo tail -n 80 /opt/camera-rtsp-service/gst_debug.log
+```
+Remove or lower categories afterwards to reduce disk writes.
 
 ## 13. Development
 Lint & tests:
