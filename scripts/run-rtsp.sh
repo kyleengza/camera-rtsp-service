@@ -241,18 +241,22 @@ trap 'kill $MTX_PID 2>/dev/null || true' EXIT INT TERM
 # Give server a moment
 sleep 1
 
-# Start pushing the webcam via ffmpeg as H264 (try native mjpeg/h264 fallback)
+# Start pushing the webcam via ffmpeg as MJPEG (try native mjpeg fallback)
 # Adjust -r (fps) and -video_size as needed.
 
 # Replace earlier H264 capability probe with a quicker check using v4l2-ctl if available to avoid blocking ffmpeg
 if command -v v4l2-ctl >/dev/null 2>&1; then
-  if v4l2-ctl --device="$VIDEO_DEV" --list-formats 2>/dev/null | grep -qi h264; then
-    INPUT_FMT_ARGS="-f v4l2 -input_format h264"
+  if v4l2-ctl --device="$VIDEO_DEV" --list-formats 2>/dev/null | grep -qi mjpeg; then
+    INPUT_FMT_ARGS="-f v4l2 -input_format mjpeg"
     ENCODE_ARGS="-c copy"
+    SELECTED_ENCODER="mjpeg (native)"
   else
     INPUT_FMT_ARGS="-f v4l2"
-    # Select best available encoder: libx264 > libopenh264 > mpeg4
-    if ffmpeg -hide_banner -encoders 2>/dev/null | grep -q '\blibx264\b'; then
+    # Select best available encoder: mjpeg > libx264 > libopenh264 > mpeg4
+    if ffmpeg -hide_banner -encoders 2>/dev/null | grep -q '\bmjpeg\b'; then
+      SELECTED_ENCODER="mjpeg (software)"
+      ENCODE_ARGS="-c:v mjpeg -q:v 5"
+    elif ffmpeg -hide_banner -encoders 2>/dev/null | grep -q '\blibx264\b'; then
       SELECTED_ENCODER="libx264"
       ENCODE_ARGS="-c:v libx264 -preset veryfast -tune zerolatency -profile:v baseline -pix_fmt yuv420p -b:v 1500k"
     elif ffmpeg -hide_banner -encoders 2>/dev/null | grep -q '\blibopenh264\b'; then
@@ -262,7 +266,7 @@ if command -v v4l2-ctl >/dev/null 2>&1; then
       SELECTED_ENCODER="mpeg4"
       ENCODE_ARGS="-c:v mpeg4 -pix_fmt yuv420p -q:v 5"
     else
-      echo "No suitable H264/MPEG4 encoder found in this ffmpeg build. Aborting." >&2
+      echo "No suitable MJPEG/H264/MPEG4 encoder found in this ffmpeg build. Aborting." >&2
       exit 1
     fi
     echo "Using encoder: $SELECTED_ENCODER" >&2
@@ -272,7 +276,10 @@ fi
 # If ENCODE_ARGS still unset, perform encoder selection (ffmpeg -list_formats was removed to avoid blocking)
 if [ -z "${ENCODE_ARGS:-}" ]; then
   INPUT_FMT_ARGS="-f v4l2"
-  if ffmpeg -hide_banner -encoders 2>/dev/null | grep -q '\blibx264\b'; then
+  if ffmpeg -hide_banner -encoders 2>/dev/null | grep -q '\bmjpeg\b'; then
+    SELECTED_ENCODER="mjpeg (software)"
+    ENCODE_ARGS="-c:v mjpeg -q:v 5"
+  elif ffmpeg -hide_banner -encoders 2>/dev/null | grep -q '\blibx264\b'; then
     SELECTED_ENCODER="libx264"
     ENCODE_ARGS="-c:v libx264 -preset veryfast -tune zerolatency -profile:v baseline -pix_fmt yuv420p -b:v 1500k"
   elif ffmpeg -hide_banner -encoders 2>/dev/null | grep -q '\blibopenh264\b'; then

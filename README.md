@@ -19,7 +19,7 @@ ffplay -rtsp_transport tcp rtsp://localhost:8554/stream
 ## Features
 - Auto‑download and run MediaMTX (successor to rtsp-simple-server)
 - Auto device detection (`/dev/video*`)
-- Encoder auto-selection (pass-through → libx264/libopenh264 → mpeg4)
+- Encoder auto-selection (native MJPEG → software MJPEG → libx264/libopenh264 → mpeg4)
 - Adjustable resolution & FPS via `VIDEO_MODE` (e.g. `640x480@30`)
 - Aggressive cleanup / reap mode
 - Retry & fallback logic
